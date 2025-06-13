@@ -4,17 +4,18 @@ from modules.video_thumbGenerator import VideoThumbnailGenerator
 from modules.utils.logwriter import setup_logging
 import logging
 
-# 監視する動画ファイルの拡張子
-patterns = ['.mp4', '.avi', '.mkv', '.flv', '.mov'] 
+# 監視する処理対象ファイルの拡張子
+patterns = ['.png', '.jpg', '.jpeg']
 
-# 対象の動画ファイルのパスのリスト
-video_files = []
+# 対象の処理対象ファイルのパスのリスト
+target_files = []
 
 # ログの設定を行う
 setup_logging()
 
+
 class VideoFileHandler(FileSystemEventHandler):
-    """新たな動画ファイルの追加または既存の動画ファイルの変更を監視し、その動画の最初のフレームをサムネイルとして保存します。"""
+    """新たな処理対象ファイルの追加または既存の処理対象ファイルの変更を監視し、動画だった場合に最初のフレームをサムネイルとして保存します。"""
 
     def __init__(self, exclude_subdirectories, seconds):
         super().__init__()
@@ -25,14 +26,16 @@ class VideoFileHandler(FileSystemEventHandler):
         # 終了メッセージをUDPで送信する
         print(reason)
         logging.info(reason)
-    
+
     def on_deleted(self, event):
         """ファイル削除時に呼び出されます。"""
         try:
             if event.src_path.endswith(tuple(patterns)):
-                print(f'Event type: {event.event_type} path : {event.src_path}')
-                logging.info(f'Event type: {event.event_type} path : {event.src_path}')
-                video_files.remove(event.src_path)
+                print(
+                    f'Event type: {event.event_type} path : {event.src_path}')
+                logging.info(
+                    f'Event type: {event.event_type} path : {event.src_path}')
+                target_files.remove(event.src_path)
                 # サムネイルを削除
                 thumb_path = f"{os.path.splitext(event.src_path)[0]}_thumbnail.jpg"
                 if os.path.isfile(thumb_path):
@@ -45,9 +48,11 @@ class VideoFileHandler(FileSystemEventHandler):
         """ファイルが追加または変更された場合に呼び出されます。"""
         try:
             if event.src_path.endswith(tuple(patterns)):
-                print(f'Event type: {event.event_type} path : {event.src_path}')
-                logging.info(f'Event type: {event.event_type} path : {event.src_path}')
-                video_files.append(event.src_path)
+                print(
+                    f'Event type: {event.event_type} path : {event.src_path}')
+                logging.info(
+                    f'Event type: {event.event_type} path : {event.src_path}')
+                target_files.append(event.src_path)
                 self.create_thumbnail(event.src_path)
         except Exception as e:
             print('Error in file monitoring: %s', e)
@@ -69,10 +74,12 @@ class VideoFileHandler(FileSystemEventHandler):
             # 起動時にファイルを読み込んだときのUDP送信
             logging.info('===============')
             logging.info(f'Starting to monitor the directory: {start_path}')
-            set_filehandle(self, start_path, self.exclude_subdirectories, video_files)
+            set_filehandle(self, start_path,
+                           self.exclude_subdirectories, target_files)
         except Exception as e:
             print('Error in listing files: %s', e)
             logging.info('[!] Error in listing files: %s', e)
+
 
 def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
     """指定したディレクトリ（およびそのサブディレクトリ）内のすべてのファイルにイベントを設定"""
@@ -84,7 +91,8 @@ def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
                 event_handler.create_thumbnail(file_path)
     else:
         for root, dirs, files in os.walk(start_path):
-            current_depth = root.count(os.path.sep) - start_path.count(os.path.sep)
+            current_depth = root.count(
+                os.path.sep) - start_path.count(os.path.sep)
             # サブディレクトリの深さが 4 以下の場合のみ処理を行う（誤使用を想定した暴走ガード）
             if current_depth < 5:
                 for file in files:
