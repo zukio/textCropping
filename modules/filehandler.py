@@ -1,6 +1,6 @@
 import os
 from watchdog.events import FileSystemEventHandler
-from modules.video_thumbGenerator import VideoThumbnailGenerator
+from modules.text_extractor import TextExtractor
 from modules.utils.logwriter import setup_logging
 import logging
 
@@ -15,7 +15,7 @@ setup_logging()
 
 
 class VideoFileHandler(FileSystemEventHandler):
-    """新たな処理対象ファイルの追加または既存の処理対象ファイルの変更を監視し、動画だった場合に最初のフレームをサムネイルとして保存します。"""
+    """新たな画像ファイルの追加または既存の画像ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
 
     def __init__(self, exclude_subdirectories, seconds):
         super().__init__()
@@ -53,20 +53,20 @@ class VideoFileHandler(FileSystemEventHandler):
                 logging.info(
                     f'Event type: {event.event_type} path : {event.src_path}')
                 target_files.append(event.src_path)
-                self.create_thumbnail(event.src_path)
+                self.extract_texts(event.src_path)
         except Exception as e:
             print('Error in file monitoring: %s', e)
             logging.info('[!] Error in file monitoring: %s', e)
 
-    def create_thumbnail(self, file_path):
-        """指定された動画ファイルからサムネイルを生成します。"""
+    def extract_texts(self, file_path):
+        """指定された画像から文字部分を抽出します。"""
         try:
-            thumbnail_path = VideoThumbnailGenerator().create_thumbnail(file_path, self.seconds)
-            print(f'Thumbnail generation succeeded: {thumbnail_path}')
-            logging.info(f'Thumbnail generation succeeded: {thumbnail_path}')
+            output_path = TextExtractor().extract_texts(file_path)
+            print(f'Text extraction succeeded: {output_path}')
+            logging.info(f'Text extraction succeeded: {output_path}')
         except Exception as e:
-            print('Thumbnail generation failed: %s', e)
-            logging.info('[!] Thumbnail generation failed: %s', e)
+            print('Text extraction failed: %s', e)
+            logging.info('[!] Text extraction failed: %s', e)
 
     def list_files(self, start_path):
         """指定したディレクトリ（およびそのサブディレクトリ）内のすべてのファイルにイベントを設定"""
@@ -88,7 +88,7 @@ def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
             if file.endswith(tuple(patterns)):
                 file_path = os.path.join(start_path, file)
                 filelist.append(file_path)
-                event_handler.create_thumbnail(file_path)
+                event_handler.extract_texts(file_path)
     else:
         for root, dirs, files in os.walk(start_path):
             current_depth = root.count(
@@ -99,4 +99,4 @@ def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
                     if file.endswith(tuple(patterns)):
                         file_path = os.path.join(root, file)
                         filelist.append(file_path)
-                        event_handler.create_thumbnail(file_path)
+                        event_handler.extract_texts(file_path)
