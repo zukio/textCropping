@@ -20,6 +20,10 @@ pytesseract.pytesseract.tesseract_cmd = tess_path
 
 
 class TextExtractor:
+    def __init__(self, output_dir=None):
+        """Create extractor with optional output directory."""
+        self.output_dir = output_dir
+
     def extract_texts(self, file_path):
         img = cv2.imread(file_path, cv2.IMREAD_COLOR)
         if img is None:
@@ -40,6 +44,12 @@ class TextExtractor:
         rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
         rgba[:, :, 3] = mask
 
-        out_path = f"{os.path.splitext(file_path)[0]}_texts.png"
+        # 出力先ディレクトリが指定されている場合はそこで保存する
+        out_dir = self.output_dir or os.path.dirname(file_path)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir, exist_ok=True)
+
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        out_path = os.path.join(out_dir, f"{base_name}_texts.png")
         cv2.imwrite(out_path, rgba)
         return out_path

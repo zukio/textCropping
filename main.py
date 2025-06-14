@@ -58,11 +58,18 @@ if __name__ == "__main__":
                         help='Port number to send the UDP messages')
     parser.add_argument('--delay', default=1, type=int,
                         help='Delay in seconds for sending UDP messages')
+    parser.add_argument('--output_dir', default='', type=str,
+                        help='Directory path to save processed files')
     args = parser.parse_args()
 
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     path = os.path.abspath(args.target) if args.target else os.path.abspath(
         os.path.join(os.getcwd(), os.pardir))
+    output_dir = os.path.abspath(args.output_dir) if args.output_dir else path
+
+    if output_dir == path:
+        print('Output directory must be different from the target directory.')
+        sys.exit(1)
 
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
@@ -79,7 +86,7 @@ if __name__ == "__main__":
     udp_sender = DelayedUDPSender(args.delay)
     # [UDP] ファイルが変更されるたびにudp_sender.send_udp_messageが呼び出され、UDPメッセージが適切なタイミングで送信されます。
     event_handler = TargetFileHandler(
-        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds)
+        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds, output_dir)
 
     # サーバーとの通信を試みる
     response = hello_server(path)

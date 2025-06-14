@@ -18,7 +18,7 @@ setup_logging()
 class TargetFileHandler(FileSystemEventHandler):
     """新たな対象ファイルの追加または既存の対象ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
 
-    def __init__(self, exclude_subdirectories, sender, ip, port, seconds):
+    def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.ip = ip
@@ -26,6 +26,7 @@ class TargetFileHandler(FileSystemEventHandler):
         self.sender = sender
         self.event_queue = []  # イベントキューを追加
         self.seconds = seconds
+        self.output_dir = output_dir
 
     def destroy(self, reason):
         # 終了メッセージをUDPで送信する
@@ -94,7 +95,7 @@ class TargetFileHandler(FileSystemEventHandler):
     def extract_texts(self, file_path):
         """指定された画像から文字部分を抽出します。"""
         try:
-            output_path = TextExtractor().extract_texts(file_path)
+            output_path = TextExtractor(self.output_dir).extract_texts(file_path)
             print(f'Text extraction succeeded: {output_path}')
             logging.info(f'Text extraction succeeded: {output_path}')
         except Exception as e:
