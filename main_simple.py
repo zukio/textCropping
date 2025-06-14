@@ -50,11 +50,18 @@ if __name__ == "__main__":
                         help='Directory path to monitor')
     parser.add_argument('--seconds', default=1, type=int,
                         help='Specify the seconds of the frame to be used for thumbnail generation')
+    parser.add_argument('--output_dir', default='', type=str,
+                        help='Directory path to save processed files')
     args = parser.parse_args()
 
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     path = os.path.abspath(args.target) if args.target else os.path.abspath(
         os.path.join(os.getcwd(), os.pardir))
+    output_dir = os.path.abspath(args.output_dir) if args.output_dir else path
+
+    if output_dir == path:
+        print('Output directory must be different from the target directory.')
+        sys.exit(1)
 
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
@@ -68,7 +75,7 @@ if __name__ == "__main__":
     # create_pid_file(os.path.dirname(os.path.abspath(__file__)))
 
     event_handler = TargetFileHandler(
-        args.exclude_subdirectories, args.seconds)
+        args.exclude_subdirectories, args.seconds, output_dir)
 
     # 監視を開始する
     observer = Observer()
