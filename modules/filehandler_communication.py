@@ -15,8 +15,8 @@ target_files = []
 setup_logging()
 
 
-class VideoFileHandler(FileSystemEventHandler):
-    """新たな画像ファイルの追加または既存の画像ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
+class TargetFileHandler(FileSystemEventHandler):
+    """新たな対象ファイルの追加または既存の対象ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
 
     def __init__(self, exclude_subdirectories, sender, ip, port, seconds):
         super().__init__()

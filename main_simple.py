@@ -5,13 +5,15 @@ import argparse
 import asyncio
 from aioconsole import ainput
 from watchdog.observers import Observer
-from modules.filehandler import VideoFileHandler
+from modules.filehandler import TargetFileHandler
 from modules.communication.ipc_client import check_existing_instance
 from modules.communication.ipc_server import start_server
 
 # プロセスサーバのタスクハンドルを保持する変数
 server_task = None
-async def main(args):  
+
+
+async def main(args):
     try:
         # プロセスサーバのタスクを開始する
         server_task = asyncio.create_task(start_server(12321, path))
@@ -26,7 +28,7 @@ async def main(args):
                 exit_handler("[Exit] Command Exit")
                 break
             await asyncio.sleep(1)
-            
+
         # プロセスサーバのタスクが完了するまで待機する
         await server_task
 
@@ -40,15 +42,19 @@ async def main(args):
 
 if __name__ == "__main__":
     # 引数 --exclude_subdirectories が指定された場合、ルートディレクトリのみが監視されます。引数が指定されていない場合、サブディレクトリも監視します。
-    parser = argparse.ArgumentParser(description='Monitor a directory and create thumbnails for video files.')
+    parser = argparse.ArgumentParser(
+        description='Monitor a directory and create thumbnails for video files.')
     parser.add_argument('--exclude_subdirectories', action='store_true',
                         help='Exclude subdirectories in monitoring and thumbnail creation.')
-    parser.add_argument('--target', default='', type=str, help='Directory path to monitor')
-    parser.add_argument('--seconds', default=1, type=int, help='Specify the seconds of the frame to be used for thumbnail generation')
+    parser.add_argument('--target', default='', type=str,
+                        help='Directory path to monitor')
+    parser.add_argument('--seconds', default=1, type=int,
+                        help='Specify the seconds of the frame to be used for thumbnail generation')
     args = parser.parse_args()
 
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
-    path = os.path.abspath(args.target) if args.target else os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+    path = os.path.abspath(args.target) if args.target else os.path.abspath(
+        os.path.join(os.getcwd(), os.pardir))
 
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
@@ -57,15 +63,17 @@ if __name__ == "__main__":
 
     # 既に別のインスタンスが実行中でないかロックファイルをチェックする
     # check_previous_instance()
-    
+
     # 実行ファイルと同じディレクトリにロックファイルを作成する
     # create_pid_file(os.path.dirname(os.path.abspath(__file__)))
 
-    event_handler = VideoFileHandler(args.exclude_subdirectories, args.seconds)
+    event_handler = TargetFileHandler(
+        args.exclude_subdirectories, args.seconds)
 
     # 監視を開始する
-    observer = Observer()    
-    observer.schedule(event_handler, path, recursive=not args.exclude_subdirectories)
+    observer = Observer()
+    observer.schedule(event_handler, path,
+                      recursive=not args.exclude_subdirectories)
     observer.start()
 
     # 終了処理
@@ -73,7 +81,7 @@ if __name__ == "__main__":
         result = event_handler.destroy(reason)
         # remove_pid_file()
         if server_task:
-                server_task.cancel()
+            server_task.cancel()
         sys.exit(result)
 
     # プログラムが終了する際に呼び出されるハンドラを登録する
@@ -92,5 +100,3 @@ if __name__ == "__main__":
         observer.stop()
         exit_handler("[Exit] Keyboard Interrupt")
     observer.join()
-
-
