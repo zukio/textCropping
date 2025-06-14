@@ -67,6 +67,20 @@ if __name__ == "__main__":
         os.path.join(os.getcwd(), os.pardir))
     output_dir = os.path.abspath(args.output_dir) if args.output_dir else path
 
+    # 出力先ディレクトリの設定
+    if args.output_dir:
+        output_dir = os.path.abspath(args.output_dir)
+    else:
+        # 監視対象の親ディレクトリに output フォルダを作成
+        parent_dir = os.path.dirname(path)
+        output_dir = os.path.join(parent_dir, 'output')
+
+    # 出力ディレクトリが存在しない場合は作成
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created output directory: {output_dir}")
+
+    # 出力先と監視対象が同じ場合はエラー
     if output_dir == path:
         print('Output directory must be different from the target directory.')
         sys.exit(1)
