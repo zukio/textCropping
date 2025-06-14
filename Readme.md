@@ -94,11 +94,13 @@
 
 2. 監視対象ディレクトリに「thumb_crafter」フォルダを作成し、ダウンロードした exe ファイルを保存します。
 
-3. FFMpeg ツールをインストールします。以下のサイトから適切なバージョンをダウンロードし、インストーラを実行します。
+3. Tesseractのインストール
 
-   FFMpeg 公式サイト：[https://ffmpeg.org/](https://ffmpeg.org/)
+    [Tesseract Windows Installer](https://github.com/UB-Mannheim/tesseract/wiki)
 
-   注：インストールが完了したら、FFMpeg がシステムのパスに追加されているはずです。本アプリは ffmpeg がシステムパスに追加されているか、またはその実行ファイル（ffmpeg.exe）が直接このスクリプトと同じディレクトリに存在することが前提となっています。
+    最新の安定版を選択し、インストーラーをダウンロード後、インストーラーを実行し、Tesseractをインストールします。インストール後、Tesseractの実行ファイルがシステムのパスに追加されていることを確認してください。
+
+    注：Tesseractのインストール先は、デフォルトでは `C:\Program Files\Tesseract-OCR` です。インストール後、PATH環境変数に追加する必要があります。
 
 ## For Custom
 

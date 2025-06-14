@@ -99,7 +99,7 @@ class VideoFileHandler(FileSystemEventHandler):
             logging.info(f'Text extraction succeeded: {output_path}')
         except Exception as e:
             print('Text extraction failed:', e)
-            logging.info('[!] Text extraction failed:', e)
+            logging.info('[!] Text extraction failed: %s', e)
 
     def list_files(self, start_path):
         """指定したディレクトリ（およびそのサブディレクトリ）内のすべてのファイルを一覧表示します。"""

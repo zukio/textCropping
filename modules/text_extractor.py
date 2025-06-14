@@ -1,7 +1,23 @@
 import os
 import cv2
+import shutil
 import pytesseract
 import numpy as np
+
+
+# 優先順位：
+# 1. 環境変数で TESSERACT_PATH があればそれを使う
+# 2. なければ、PATHから自動検出
+# 3. それも失敗したらエラーを投げる
+
+tess_path = os.environ.get("TESSERACT_PATH") or shutil.which("tesseract")
+
+if tess_path is None:
+    raise RuntimeError(
+        "Tesseractが見つかりません。TESSERACT_PATH 環境変数を指定するか、PATHを通してください。")
+
+pytesseract.pytesseract.tesseract_cmd = tess_path
+
 
 class TextExtractor:
     def extract_texts(self, file_path):
