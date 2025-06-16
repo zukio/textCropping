@@ -129,8 +129,11 @@ if __name__ == "__main__":
                         help='Color mode for output images')
     parser.add_argument('--color', default='#000000', type=str,
                         help='Mono color when color_mode is mono. Hex or R,G,B')
+    parser.add_argument('--single_instance_only', default='false', type=str,
+                        help='When true, allow duplicate launches by skipping instance checks')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
+    args.single_instance_only = args.single_instance_only.lower() == 'true'
     config = {}
     if os.path.isfile(args.config):
         with open(args.config, 'r', encoding='utf-8') as f:
@@ -141,9 +144,12 @@ if __name__ == "__main__":
 
     # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
     for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
-                'output_dir', 'no_console', 'crop', 'color_mode', 'color']:
+                'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'single_instance_only']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
+
+    if isinstance(args.single_instance_only, str):
+        args.single_instance_only = args.single_instance_only.lower() == 'true'
 
     # ignore_subfolders is treated as an alias of exclude_subdirectories
     if args.ignore_subfolders:
@@ -189,7 +195,7 @@ if __name__ == "__main__":
     }
 
     # 既に起動しているインスタンスをチェックする
-    if check_existing_instance(12321, path):
+    if not args.single_instance_only and check_existing_instance(12321, path):
         print("既に起動しています。")
         sys.exit(0)
 
@@ -216,7 +222,7 @@ if __name__ == "__main__":
 
     # サーバーとの通信を試みる
     response = hello_server(path)
-    if response is not None:
+    if not args.single_instance_only and response is not None:
         print("Hello UDP: " + response)
         if response == "overlapping":
             # remove_pid_file()
