@@ -105,6 +105,8 @@ if __name__ == "__main__":
                         help='Path to configuration file')
     parser.add_argument('--exclude_subdirectories', default=False, action='store_true',
                         help='Exclude subdirectories in monitoring and thumbnail creation.')
+    parser.add_argument('--ignore_subfolders', action='store_true',
+                        help='Alias of --exclude_subdirectories for backward compatibility.')
     parser.add_argument('--target', default='', type=str,
                         help='Directory path to monitor')
     parser.add_argument('--seconds', default=1, type=int,
@@ -138,10 +140,14 @@ if __name__ == "__main__":
                 config = {}
 
     # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
-    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay',
+    for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
                 'output_dir', 'no_console', 'crop', 'color_mode', 'color']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
+
+    # ignore_subfolders is treated as an alias of exclude_subdirectories
+    if args.ignore_subfolders:
+        args.exclude_subdirectories = True
 
     if args.disable_udp == parser.get_default('disable_udp'):
         use_udp = config.get('use_udp', True)

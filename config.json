@@ -1,5 +1,6 @@
 {
-	"exclude_subdirectories": false,
+        "exclude_subdirectories": false,
+        "ignore_subfolders": false,
 	"target": "",
 	"seconds": 1,
 	"ip": "localhost",
