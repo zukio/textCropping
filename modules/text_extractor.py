@@ -90,10 +90,8 @@ class TextExtractor:
                 # 検出されたテキストを改行ごとに分割してログに記録
                 text_logger.info(f"検出テキスト: \n{detected_text.strip()}")
             else:
-                text_logger.info("テキスト認識できませんでした（ボックスのみ検出）")
                 return None
         else:
-            text_logger.info(f"ファイル: {base_name} - 文字検出なし")
             return None
 
         rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
