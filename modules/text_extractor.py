@@ -212,14 +212,14 @@ class TextExtractor:
                 if len(parts) >= 5:
                     char_count += 1
 
-        # マスク画像を作成
+        # マスク画像(文字領域)を作成
         mask = np.zeros((h, w), dtype=np.uint8)
 
         for b in boxes.splitlines():
             parts = b.split(' ')
             if len(parts) >= 5:
                 x1, y1, x2, y2 = map(int, parts[1:5])
-                # Tesseract's origin is at bottom-left
+                # Tesseract の座標系は左下が原点
                 mask[h - y2:h - y1, x1:x2] = 255
 
         # 文字検出結果をログに記録
@@ -244,8 +244,33 @@ class TextExtractor:
             logging.info(msg)
             return None
 
-        rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
-        rgba[:, :, 3] = mask        # 出力先ディレクトリの処理
+        # ----- 文字領域以外を白で塗りつぶす -----
+        filled = img.copy()
+        # pytesseract.image_to_boxes の精度が低いため、この工程はスキップ
+        # filled[mask == 0] = (255, 255, 255)
+
+        # ----- 二値化してテキストだけのマスクを作成 -----
+        gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
+        otsu_thresh, _ = cv2.threshold(gray_mask, 0, 255,
+                                       cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        # Otsuで求めた値より少し高い閾値を設定して非文字部分を除去
+        strict_thresh = min(255, otsu_thresh + 20)
+        _, binary = cv2.threshold(gray_mask, strict_thresh, 255,
+                                  cv2.THRESH_BINARY)
+        text_mask = cv2.bitwise_not(binary)
+
+        # 小さなノイズを除去
+        kernel = np.ones((3, 3), np.uint8)
+        text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_OPEN, kernel)
+
+        # ----- マスクを用いて元画像から文字部分のみ抽出 -----
+        masked = cv2.bitwise_and(img, img, mask=text_mask)
+
+        # 透過PNG用にAlphaチャネルを設定
+        rgba = cv2.cvtColor(masked, cv2.COLOR_BGR2BGRA)
+        rgba[:, :, 3] = text_mask
+        # 出力先ディレクトリの処理
         if self.output_dir:
             # 出力先が指定されている場合はそこを使用
             out_dir = self.output_dir
