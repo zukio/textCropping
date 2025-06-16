@@ -12,14 +12,17 @@ REM 仮想環境の activate
 call .venv\Scripts\activate.bat
 
 REM Pythonスクリプト実行
-python main.py 
+python main.py ^
 --ignore_subfolders false ^
 --ip localhost ^
 --port 12345 ^
 --send_interval 1 ^
 --single_instance_only true ^
 --target "." ^
---output_dir "..\output"
+--output_dir "..\output" ^
+--color_mode="mono" ^
+--mono_color="#FF0000"
+REM --crop オプションは--crop と書くと True になります。指定しない場合は False になります（デフォルト値）。--crop=False という構文はエラーになります。
 
 REM エラーコードを返す
 exit /b %ERRORLEVEL%
