@@ -85,13 +85,23 @@ class TextExtractor:
         # 文字検出結果をログに記録
         base_name = os.path.basename(file_path)
         if char_count > 0:
-            text_logger.info(f"ファイル: {base_name} - 文字検出: {char_count}文字")
+            msg = f"ファイル: {base_name} - 文字検出: {char_count}文字"
+            text_logger.info(msg)
+            logging.info(msg)
             if detected_text.strip():
+                text = detected_text.strip()
                 # 検出されたテキストを改行ごとに分割してログに記録
-                text_logger.info(f"検出テキスト: \n{detected_text.strip()}")
+                text_logger.info(f"検出テキスト: \n{text}")
+                logging.info(f"検出テキスト: \n{text}")
             else:
+                msg = "テキスト認識できませんでした（ボックスのみ検出）"
+                text_logger.info(msg)
+                logging.info(msg)
                 return None
         else:
+            msg = f"ファイル: {base_name} - 文字検出なし"
+            text_logger.info(msg)
+            logging.info(msg)
             return None
 
         rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
