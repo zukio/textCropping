@@ -30,14 +30,34 @@ def _create_image():
     return image
 
 
-def setup_tray(exit_callback):
-    """Start system tray icon."""
+def setup_tray(exit_callback, settings):
+    """Start system tray icon with settings submenu."""
     icon = pystray.Icon('textCropping', _create_image(), 'textCropping')
-    icon.menu = pystray.Menu(
+
+    settings_menu = pystray.Menu(
         pystray.MenuItem(
-            'Exit', lambda: exit_callback('[Exit] Tray')
-        )
+            f"監視フォルダ: {settings['target']}", None, enabled=False),
+        pystray.MenuItem(
+            f"保存先フォルダ: {settings['output_dir']}", None, enabled=False),
+        pystray.MenuItem(
+            f"クロップ: {'ON' if settings['crop'] else 'OFF'}",
+            None,
+            enabled=False),
+        pystray.MenuItem(
+            f"カラーモード: {settings['color_mode']}", None, enabled=False),
+        pystray.MenuItem(
+            f"UDP通知: {'ON' if settings['use_udp'] else 'OFF'}",
+            None,
+            enabled=False),
+        pystray.MenuItem(
+            f"UDP {settings['ip']}:{settings['port']}", None, enabled=False),
     )
+
+    icon.menu = pystray.Menu(
+        pystray.MenuItem('設定', settings_menu),
+        pystray.MenuItem('Exit', lambda: exit_callback('[Exit] Tray')),
+    )
+
     threading.Thread(target=icon.run, daemon=True).start()
     return icon
 
@@ -101,6 +121,12 @@ if __name__ == "__main__":
                         help='Run in background mode without console input')
     parser.add_argument('--disable_udp', action='store_true',
                         help='Disable UDP notifications')
+    parser.add_argument('--crop', action='store_true',
+                        help='Crop image to text area')
+    parser.add_argument('--color_mode', default='original', choices=['original', 'mono'],
+                        help='Color mode for output images')
+    parser.add_argument('--color', default='#000000', type=str,
+                        help='Mono color when color_mode is mono. Hex or R,G,B')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
     config = {}
@@ -112,7 +138,8 @@ if __name__ == "__main__":
                 config = {}
 
     # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
-    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay', 'output_dir', 'no_console']:
+    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay',
+                'output_dir', 'no_console', 'crop', 'color_mode', 'color']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 
@@ -145,6 +172,16 @@ if __name__ == "__main__":
             os.makedirs(output_dir)
         print(f"新しい出力ディレクトリ: {output_dir}")
 
+    settings = {
+        'target': path,
+        'output_dir': output_dir,
+        'crop': args.crop,
+        'color_mode': args.color_mode,
+        'use_udp': use_udp,
+        'ip': args.ip,
+        'port': args.port,
+    }
+
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
         print("既に起動しています。")
@@ -160,7 +197,16 @@ if __name__ == "__main__":
     udp_sender = DelayedUDPSender(args.delay)
     # [UDP] ファイルが変更されるたびにudp_sender.send_udp_messageが呼び出され、UDPメッセージが適切なタイミングで送信されます。
     event_handler = TargetFileHandler(
-        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds, output_dir, use_udp)
+        args.exclude_subdirectories,
+        udp_sender,
+        args.ip,
+        args.port,
+        args.seconds,
+        output_dir,
+        crop=args.crop,
+        color_mode=args.color_mode,
+        mono_color=args.color,
+        enable_udp=use_udp)
 
     # サーバーとの通信を試みる
     response = hello_server(path)
@@ -209,7 +255,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_wrapper("[Exit] Signal Interrupt"))
 
     # タスクトレイアイコンを表示する
-    tray_icon = setup_tray(exit_handler)    # アプリケーションのメイン処理
+    tray_icon = setup_tray(exit_handler, settings)    # アプリケーションのメイン処理
     try:
         asyncio.run(main(args))
     except KeyboardInterrupt:

@@ -54,9 +54,12 @@ else:
 
 
 class TextExtractor:
-    def __init__(self, output_dir=None):
-        """Create extractor with optional output directory."""
+    def __init__(self, output_dir=None, crop=False, color_mode="original", mono_color="#000000"):
+        """Create extractor with optional output directory and options."""
         self.output_dir = output_dir
+        self.crop = crop
+        self.color_mode = color_mode
+        self.mono_color = mono_color
         self.ocr_engine = "tesseract"
         self.easyocr_reader = None
 
@@ -68,6 +71,9 @@ class TextExtractor:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     self.ocr_engine = config.get('ocr_engine', "tesseract")
+                    self.crop = config.get('crop', self.crop)
+                    self.color_mode = config.get('color_mode', self.color_mode)
+                    self.mono_color = config.get('color', self.mono_color)
             except Exception as e:
                 text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
                 self.ocr_engine = "tesseract"
@@ -76,6 +82,24 @@ class TextExtractor:
         if not TESSERACT_AVAILABLE and self.ocr_engine == "tesseract":
             self.ocr_engine = "easyocr"
             text_logger.info("Tesseractが利用できないためEasyOCRを使用します")
+
+    def _parse_color(self, color):
+        """Convert color specification to BGR tuple."""
+        if isinstance(color, (list, tuple)) and len(color) == 3:
+            return tuple(int(c) for c in reversed(color))
+        if isinstance(color, str):
+            if color.startswith("#") and len(color) == 7:
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                return (b, g, r)
+            if "," in color:
+                parts = color.split(',')
+                if len(parts) == 3:
+                    r, g, b = [int(p.strip()) for p in parts]
+                    return (b, g, r)
+        # default black
+        return (0, 0, 0)
 
     def _init_easyocr(self):
         """EasyOCRを初期化する"""
@@ -307,11 +331,22 @@ class TextExtractor:
         text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_OPEN, kernel)
 
         # ----- マスクを用いて元画像から文字部分のみ抽出 -----
-        masked = cv2.bitwise_and(img, img, mask=text_mask)
+        if self.color_mode == "original":
+            masked = cv2.bitwise_and(img, img, mask=text_mask)
+        else:
+            color = self._parse_color(self.mono_color)
+            masked = np.zeros_like(img)
+            masked[text_mask > 0] = color
 
         # 透過PNG用にAlphaチャネルを設定
         rgba = cv2.cvtColor(masked, cv2.COLOR_BGR2BGRA)
         rgba[:, :, 3] = text_mask
+
+        if self.crop:
+            coords = cv2.findNonZero(text_mask)
+            if coords is not None:
+                x, y, w2, h2 = cv2.boundingRect(coords)
+                rgba = rgba[y:y+h2, x:x+w2]
         # 出力先ディレクトリの処理
         if self.output_dir:
             # 出力先が指定されている場合はそこを使用
