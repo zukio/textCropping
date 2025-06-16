@@ -7,6 +7,9 @@
 	"delay": 1,
 	"output_dir": "",
 	"no_console": false,
-	"use_udp": true,
-	"ocr_engine": "tesseract"
+        "use_udp": true,
+        "ocr_engine": "tesseract",
+        "crop": false,
+        "color_mode": "original",
+        "color": "#000000"
 }

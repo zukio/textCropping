@@ -101,6 +101,12 @@ if __name__ == "__main__":
                         help='Run in background mode without console input')
     parser.add_argument('--disable_udp', action='store_true',
                         help='Disable UDP notifications')
+    parser.add_argument('--crop', action='store_true',
+                        help='Crop image to text area')
+    parser.add_argument('--color_mode', default='original', choices=['original', 'mono'],
+                        help='Color mode for output images')
+    parser.add_argument('--color', default='#000000', type=str,
+                        help='Mono color when color_mode is mono. Hex or R,G,B')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
     config = {}
@@ -112,7 +118,8 @@ if __name__ == "__main__":
                 config = {}
 
     # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
-    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay', 'output_dir', 'no_console']:
+    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay',
+                'output_dir', 'no_console', 'crop', 'color_mode', 'color']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 
@@ -160,7 +167,16 @@ if __name__ == "__main__":
     udp_sender = DelayedUDPSender(args.delay)
     # [UDP] ファイルが変更されるたびにudp_sender.send_udp_messageが呼び出され、UDPメッセージが適切なタイミングで送信されます。
     event_handler = TargetFileHandler(
-        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds, output_dir, use_udp)
+        args.exclude_subdirectories,
+        udp_sender,
+        args.ip,
+        args.port,
+        args.seconds,
+        output_dir,
+        crop=args.crop,
+        color_mode=args.color_mode,
+        mono_color=args.color,
+        enable_udp=use_udp)
 
     # サーバーとの通信を試みる
     response = hello_server(path)
