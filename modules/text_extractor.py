@@ -44,12 +44,13 @@ text_logger = setup_text_logging()
 # 3. それも失敗したらエラーを投げる
 
 tess_path = os.environ.get("TESSERACT_PATH") or shutil.which("tesseract")
+TESSERACT_AVAILABLE = tess_path is not None
 
-if tess_path is None:
-    raise RuntimeError(
-        "Tesseractが見つかりません。TESSERACT_PATH 環境変数を指定するか、PATHを通してください。")
-
-pytesseract.pytesseract.tesseract_cmd = tess_path
+if TESSERACT_AVAILABLE:
+    pytesseract.pytesseract.tesseract_cmd = tess_path
+else:
+    text_logger.warning(
+        "Tesseractが見つかりません。EasyOCRへフォールバックします")
 
 
 class TextExtractor:
@@ -70,6 +71,11 @@ class TextExtractor:
             except Exception as e:
                 text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
                 self.ocr_engine = "tesseract"
+
+        # Tesseractが使えない場合はEasyOCRへフォールバック
+        if not TESSERACT_AVAILABLE and self.ocr_engine == "tesseract":
+            self.ocr_engine = "easyocr"
+            text_logger.info("Tesseractが利用できないためEasyOCRを使用します")
 
     def _init_easyocr(self):
         """EasyOCRを初期化する"""
@@ -171,6 +177,11 @@ class TextExtractor:
             text_logger.error(f"詳細なエラー: {traceback.format_exc()}")
             return None, None, 0
 
+    def extract_texts_with_saas(self, img):
+        """SaaS型OCRを使用してテキストを抽出 (未実装)"""
+        text_logger.warning("SaaS OCR は未実装です")
+        return None, None, 0
+
     def extract_texts(self, file_path):
         img = cv2.imread(file_path, cv2.IMREAD_COLOR)
         if img is None:
@@ -180,37 +191,42 @@ class TextExtractor:
 
         # 設定に基づいてOCRエンジンを選択
         if self.ocr_engine == "easyocr":
-            # EasyOCRを使用する
-            detected_text, boxes, char_count = self.extract_texts_with_easyocr(
-                img)
+            # まずTesseractで文字領域を検出（可能なら）
+            pre_img = img
+            tess_boxes = ""
+            if TESSERACT_AVAILABLE:
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                tess_boxes = pytesseract.image_to_boxes(gray)
+                pre_mask = np.zeros((h, w), dtype=np.uint8)
+                for b in tess_boxes.splitlines():
+                    parts = b.split(' ')
+                    if len(parts) >= 5:
+                        x1, y1, x2, y2 = map(int, parts[1:5])
+                        pre_mask[h - y2:h - y1, x1:x2] = 255
+                pre_img = img.copy()
+                pre_img[pre_mask == 0] = (255, 255, 255)
+
+            detected_text, boxes, char_count = self.extract_texts_with_easyocr(pre_img)
 
             # EasyOCRが失敗した場合はTesseractにフォールバック
             if detected_text is None or boxes is None:
                 text_logger.info("EasyOCRでの検出に失敗しました。Tesseractを使用します。")
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                detected_text = pytesseract.image_to_string(
-                    gray, lang='jpn+eng')
+                detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
                 boxes = pytesseract.image_to_boxes(gray)
+                char_count = sum(1 for b in boxes.splitlines() if len(b.split(' ')) >= 5)
 
-                # 文字数を再計算
-                char_count = 0
-                for b in boxes.splitlines():
-                    parts = b.split(' ')
-                    if len(parts) >= 5:
-                        char_count += 1
+        elif self.ocr_engine == "saas":
+            detected_text, boxes, char_count = self.extract_texts_with_saas(img)
+            if boxes is None:
+                return None
 
         else:
             # デフォルト: Tesseractを使用
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
             boxes = pytesseract.image_to_boxes(gray)
-
-            # 検出された文字の数をカウント
-            char_count = 0
-            for b in boxes.splitlines():
-                parts = b.split(' ')
-                if len(parts) >= 5:
-                    char_count += 1
+            char_count = sum(1 for b in boxes.splitlines() if len(b.split(' ')) >= 5)
 
         # マスク画像(文字領域)を作成
         mask = np.zeros((h, w), dtype=np.uint8)
@@ -246,8 +262,8 @@ class TextExtractor:
 
         # ----- 文字領域以外を白で塗りつぶす -----
         filled = img.copy()
-        # pytesseract.image_to_boxes の精度が低いため、この工程はスキップ
-        # filled[mask == 0] = (255, 255, 255)
+
+        filled[mask == 0] = (255, 255, 255)
 
         # ----- 二値化してテキストだけのマスクを作成 -----
         gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
@@ -257,6 +273,7 @@ class TextExtractor:
 
         # Otsuで求めた値より少し高い閾値を設定して非文字部分を除去
         strict_thresh = min(255, otsu_thresh)
+
         _, binary = cv2.threshold(gray_mask, strict_thresh, 255,
                                   cv2.THRESH_BINARY)
         text_mask = cv2.bitwise_not(binary)
