@@ -189,44 +189,68 @@ class TextExtractor:
 
         h, w = img.shape[:2]
 
+        # 画像の前処理を実行
+        text_logger.info(f"ファイル: {os.path.basename(file_path)} の前処理を開始します")
+        enhanced_img, binary_img = self.preprocess_image(img)
+
+        # 前処理結果の保存（デバッグ用）
+        if self.output_dir:
+            debug_dir = os.path.join(self.output_dir, 'debug')
+        else:
+            parent_dir = os.path.dirname(os.path.dirname(file_path))
+            debug_dir = os.path.join(parent_dir, 'output', 'debug')
+
+        if not os.path.exists(debug_dir):
+            os.makedirs(debug_dir, exist_ok=True)
+
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        cv2.imwrite(os.path.join(
+            debug_dir, f"{base_name}_enhanced.jpg"), enhanced_img)
+        cv2.imwrite(os.path.join(
+            debug_dir, f"{base_name}_binary.jpg"), binary_img)
+
         # 設定に基づいてOCRエンジンを選択
         if self.ocr_engine == "easyocr":
             # まずTesseractで文字領域を検出（可能なら）
-            pre_img = img
+            pre_img = enhanced_img  # 前処理済み画像を使用
             tess_boxes = ""
             if TESSERACT_AVAILABLE:
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                tess_boxes = pytesseract.image_to_boxes(gray)
+                # 二値化画像を使用してテキスト領域検出
+                tess_boxes = pytesseract.image_to_boxes(binary_img)
                 pre_mask = np.zeros((h, w), dtype=np.uint8)
                 for b in tess_boxes.splitlines():
                     parts = b.split(' ')
                     if len(parts) >= 5:
                         x1, y1, x2, y2 = map(int, parts[1:5])
                         pre_mask[h - y2:h - y1, x1:x2] = 255
-                pre_img = img.copy()
+                pre_img = enhanced_img.copy()
                 pre_img[pre_mask == 0] = (255, 255, 255)
 
-            detected_text, boxes, char_count = self.extract_texts_with_easyocr(pre_img)
+            detected_text, boxes, char_count = self.extract_texts_with_easyocr(
+                pre_img)
 
             # EasyOCRが失敗した場合はTesseractにフォールバック
             if detected_text is None or boxes is None:
                 text_logger.info("EasyOCRでの検出に失敗しました。Tesseractを使用します。")
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
-                boxes = pytesseract.image_to_boxes(gray)
-                char_count = sum(1 for b in boxes.splitlines() if len(b.split(' ')) >= 5)
+                detected_text = pytesseract.image_to_string(
+                    binary_img, lang='jpn+eng')
+                boxes = pytesseract.image_to_boxes(binary_img)
+                char_count = sum(1 for b in boxes.splitlines()
+                                 if len(b.split(' ')) >= 5)
 
         elif self.ocr_engine == "saas":
-            detected_text, boxes, char_count = self.extract_texts_with_saas(img)
+            detected_text, boxes, char_count = self.extract_texts_with_saas(
+                enhanced_img)
             if boxes is None:
                 return None
 
         else:
             # デフォルト: Tesseractを使用
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
-            boxes = pytesseract.image_to_boxes(gray)
-            char_count = sum(1 for b in boxes.splitlines() if len(b.split(' ')) >= 5)
+            detected_text = pytesseract.image_to_string(
+                binary_img, lang='jpn+eng')
+            boxes = pytesseract.image_to_boxes(binary_img)
+            char_count = sum(1 for b in boxes.splitlines()
+                             if len(b.split(' ')) >= 5)
 
         # マスク画像(文字領域)を作成
         mask = np.zeros((h, w), dtype=np.uint8)
@@ -313,3 +337,115 @@ class TextExtractor:
         out_path = os.path.join(out_dir, f"{base_name}_texts.png")
         cv2.imwrite(out_path, rgba)
         return out_path
+
+    def remove_noise(self, image):
+        """
+        ノイズ除去処理を行います。
+        ガウシアンフィルタとメディアンフィルタを適用してノイズを低減します。
+
+        Args:
+            image: 入力画像 (BGR形式)
+
+        Returns:
+            ノイズ除去された画像
+        """
+        text_logger.info("ノイズ除去処理を適用しています...")
+
+        # ガウシアンフィルタでノイズを低減
+        blur = cv2.GaussianBlur(image, (3, 3), 0)
+
+        # メディアンフィルタで塩コショウノイズを除去
+        median = cv2.medianBlur(blur, 3)
+
+        return median
+
+    def adjust_contrast(self, image):
+        """
+        コントラスト調整処理を行います。
+        CLAHE (Contrast Limited Adaptive Histogram Equalization) を使用します。
+
+        Args:
+            image: 入力画像
+
+        Returns:
+            コントラスト調整された画像
+        """
+        text_logger.info("コントラスト調整処理を適用しています...")
+
+        # グレースケール変換
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+
+        # CLAHEでコントラスト調整
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+
+        # 元が3チャンネルの場合は3チャンネルに戻す
+        if len(image.shape) == 3:
+            enhanced_bgr = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+            return enhanced_bgr
+
+        return enhanced
+
+    def adaptive_threshold(self, image):
+        """
+        適応的二値化処理を行います。
+        局所的な領域ごとに最適な閾値を算出して二値化します。
+
+        Args:
+            image: 入力画像
+
+        Returns:
+            二値化された画像
+        """
+        text_logger.info("適応的二値化処理を適用しています...")
+
+        # グレースケールに変換
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+
+        # 適応的二値化
+        binary = cv2.adaptiveThreshold(
+            gray,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            11,  # ブロックサイズ
+            2    # 定数C
+        )
+
+        # 形態学的処理でノイズ除去と文字の連結
+        kernel = np.ones((2, 2), np.uint8)
+        binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+        return binary
+
+    def preprocess_image(self, image):
+        """
+        テキスト抽出のための画像前処理を行います。
+        ノイズ除去、コントラスト調整、適応的二値化を順に適用します。
+
+        Args:
+            image: 入力画像 (BGR形式)
+
+        Returns:
+            前処理済みの画像と二値化画像のタプル
+        """
+        text_logger.info("画像の前処理を開始します...")
+
+        # ノイズ除去
+        denoised = self.remove_noise(image)
+
+        # コントラスト調整
+        enhanced = self.adjust_contrast(denoised)
+
+        # 適応的二値化
+        binary = self.adaptive_threshold(enhanced)
+
+        text_logger.info("画像の前処理が完了しました")
+
+        return enhanced, binary

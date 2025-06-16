@@ -69,7 +69,7 @@
 オプションは、アプリケーションの exe ファイルを右クリックし、[プロパティ]を開いて、起動時引数を書き加えることで設定可能です：
 
 ```shell
-thumb_crafter_udp.exe --exclude_subdirectories --ip <IPアドレス> --port <ポート番号>
+text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポート番号>
 ```
 
 * `--exclude_subdirectories`: サブディレクトリの監視を除外します。このオプションを指定すると、指定したディレクトリのみが監視されます。
@@ -142,7 +142,7 @@ thumb_crafter_udp.exe --exclude_subdirectories --ip <IPアドレス> --port <ポ
 1. リポジトリをクローンします。
 
    ```shell
-   git clone https://github.com/zukio/thumb-crafter.git
+   git clone https://github.com/zukio/text-cropping.git
    ```
 
 2. プロジェクトのディレクトリに移動します。
@@ -157,7 +157,7 @@ thumb_crafter_udp.exe --exclude_subdirectories --ip <IPアドレス> --port <ポ
    pip install -r requirements.txt
    ```
 
-4. [FFMpeg](https://ffmpeg.org/) ツールをインストールします。ffmpeg はシステムパスに追加されているか、またはその実行ファイルが直接このスクリプトと同じディレクトリに存在することが前提となっています。
+4. [Tesseract Windows Installer](https://github.com/UB-Mannheim/tesseract/wiki) をインストールします。Tesseract はシステムパスに追加されているか、またはその実行ファイルが直接このスクリプトと同じディレクトリに存在することが前提となっています。
 
 5. main.py スクリプトを使用して、ディレクトリの監視とサムネイル生成を開始します。
 
