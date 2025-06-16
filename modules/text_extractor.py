@@ -104,10 +104,11 @@ class TextExtractor:
             parent_dir = os.path.dirname(os.path.dirname(file_path))
             out_dir = os.path.join(parent_dir, 'output')
 
-        # 出力先ディレクトリが監視対象ディレクトリと同じかチェック
+        # 出力先ディレクトリが監視対象ディレクトリ内にないかチェック
         file_dir = os.path.dirname(file_path)
-        if os.path.normpath(file_dir) == os.path.normpath(out_dir):
-            text_logger.warning(f"出力先ディレクトリが監視対象と同じです: {out_dir}")
+        from modules.utils.path_utils import is_subpath
+        if is_subpath(out_dir, file_dir):
+            text_logger.warning(f"出力先ディレクトリが監視対象内です: {out_dir}")
             # 安全な代替として親ディレクトリの'output'フォルダを使用
             out_dir = os.path.join(os.path.dirname(file_dir), 'output')
             text_logger.info(f"出力先を変更しました: {out_dir}")

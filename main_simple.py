@@ -59,9 +59,14 @@ if __name__ == "__main__":
         os.path.join(os.getcwd(), os.pardir))
     output_dir = os.path.abspath(args.output_dir) if args.output_dir else path
 
-    if output_dir == path:
-        print('Output directory must be different from the target directory.')
-        sys.exit(1)
+    from modules.utils.path_utils import is_subpath
+    if is_subpath(output_dir, path):
+        print('警告: 出力ディレクトリが監視対象ディレクトリ内にあります。')
+        print('出力先を監視対象の親ディレクトリに変更します。')
+        output_dir = os.path.join(os.path.dirname(path), 'output')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        print(f'新しい出力ディレクトリ: {output_dir}')
 
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
