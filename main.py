@@ -30,14 +30,34 @@ def _create_image():
     return image
 
 
-def setup_tray(exit_callback):
-    """Start system tray icon."""
+def setup_tray(exit_callback, settings):
+    """Start system tray icon with settings submenu."""
     icon = pystray.Icon('textCropping', _create_image(), 'textCropping')
-    icon.menu = pystray.Menu(
+
+    settings_menu = pystray.Menu(
         pystray.MenuItem(
-            'Exit', lambda: exit_callback('[Exit] Tray')
-        )
+            f"監視フォルダ: {settings['target']}", None, enabled=False),
+        pystray.MenuItem(
+            f"保存先フォルダ: {settings['output_dir']}", None, enabled=False),
+        pystray.MenuItem(
+            f"クロップ: {'ON' if settings['crop'] else 'OFF'}",
+            None,
+            enabled=False),
+        pystray.MenuItem(
+            f"カラーモード: {settings['color_mode']}", None, enabled=False),
+        pystray.MenuItem(
+            f"UDP通知: {'ON' if settings['use_udp'] else 'OFF'}",
+            None,
+            enabled=False),
+        pystray.MenuItem(
+            f"UDP {settings['ip']}:{settings['port']}", None, enabled=False),
     )
+
+    icon.menu = pystray.Menu(
+        pystray.MenuItem('設定', settings_menu),
+        pystray.MenuItem('Exit', lambda: exit_callback('[Exit] Tray')),
+    )
+
     threading.Thread(target=icon.run, daemon=True).start()
     return icon
 
@@ -152,6 +172,16 @@ if __name__ == "__main__":
             os.makedirs(output_dir)
         print(f"新しい出力ディレクトリ: {output_dir}")
 
+    settings = {
+        'target': path,
+        'output_dir': output_dir,
+        'crop': args.crop,
+        'color_mode': args.color_mode,
+        'use_udp': use_udp,
+        'ip': args.ip,
+        'port': args.port,
+    }
+
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):
         print("既に起動しています。")
@@ -225,7 +255,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_wrapper("[Exit] Signal Interrupt"))
 
     # タスクトレイアイコンを表示する
-    tray_icon = setup_tray(exit_handler)    # アプリケーションのメイン処理
+    tray_icon = setup_tray(exit_handler, settings)    # アプリケーションのメイン処理
     try:
         asyncio.run(main(args))
     except KeyboardInterrupt:
