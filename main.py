@@ -3,8 +3,11 @@ import sys
 import signal
 import argparse
 import asyncio
+import threading
 from aioconsole import ainput
 from watchdog.observers import Observer
+from PIL import Image, ImageDraw
+import pystray
 from modules.communication.udp_client import DelayedUDPSender, hello_server
 from modules.filehandler_communication import TargetFileHandler
 from modules.communication.ipc_client import check_existing_instance
@@ -13,6 +16,29 @@ from modules.communication.ipc_server import start_server
 
 # プロセスサーバのタスクハンドルを保持する変数
 server_task = None
+
+# トレイアイコンのインスタンスを保持する変数
+tray_icon = None
+
+
+def _create_image():
+    """Tray icon image."""
+    image = Image.new('RGB', (64, 64), (0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((8, 8, 56, 56), fill=(0, 128, 255))
+    return image
+
+
+def setup_tray(exit_callback):
+    """Start system tray icon."""
+    icon = pystray.Icon('textCropping', _create_image(), 'textCropping')
+    icon.menu = pystray.Menu(
+        pystray.MenuItem(
+            'Exit', lambda: exit_callback('[Exit] Tray')
+        )
+    )
+    threading.Thread(target=icon.run, daemon=True).start()
+    return icon
 
 
 async def main(args):
@@ -117,6 +143,8 @@ if __name__ == "__main__":
     def exit_handler(reason):
         result = event_handler.destroy(reason)
         # remove_pid_file()
+        if tray_icon:
+            tray_icon.stop()
         if server_task:
             server_task.cancel()
         sys.exit(result)
@@ -128,6 +156,9 @@ if __name__ == "__main__":
     def exit_wrapper(reason):
         return lambda sig, frame: exit_handler(reason)
     signal.signal(signal.SIGINT, exit_wrapper("[Exit] Signal Interrupt"))
+
+    # タスクトレイアイコンを表示する
+    tray_icon = setup_tray(exit_handler)
 
     # アプリケーションのメイン処理
     try:
