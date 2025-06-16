@@ -33,6 +33,9 @@ class TargetFileHandler(FileSystemEventHandler):
         self.color_mode = color_mode
         self.mono_color = mono_color
 
+        # 処理済みファイルを追跡するためのセット
+        self.processed_files = set()
+
     def destroy(self, reason):
         # 終了メッセージをUDPで送信する
         if self.enable_udp:
@@ -69,12 +72,46 @@ class TargetFileHandler(FileSystemEventHandler):
             self.event_queue.append(event)
             self.send_udp_message()
 
-    # def on_created(self, event):
+    def on_created(self, event):
+        """ファイル作成時に呼び出されます。"""
+        try:
+            # ディレクトリの場合はスキップ
+            if event.is_directory:
+                return
+
+            if event.src_path.endswith(tuple(patterns)):
+                # 既に処理済みのファイルはスキップ
+                if event.src_path in self.processed_files:
+                    logging.debug(f"スキップ（既に処理済み）: {event.src_path}")
+                    return
+
+                # 処理済みリストに追加
+                self.processed_files.add(event.src_path)
+
+                # リストを更新
+                if event.src_path not in target_files:
+                    target_files.append(event.src_path)
+
+                # 文字抽出を実行
+                # メッセージ送信キューに追加
+                self.extract_texts(event.src_path)
+                self.queue_event(event)
+        except Exception as e:
+            print('Error in file monitoring:', e)
+            logging.info('[!] Error in file monitoring: %s', e)
 
     def on_deleted(self, event):
         """ファイル削除時に呼び出されます。"""
         try:
+            # ディレクトリの場合はスキップ
+            if event.is_directory:
+                return
+
             if event.src_path.endswith(tuple(patterns)):
+                # 処理済みリストから削除
+                if event.src_path in self.processed_files:
+                    self.processed_files.remove(event.src_path)
+
                 target_files.remove(event.src_path)
                 # サムネイルを削除
                 thumb_path = f"{os.path.splitext(event.src_path)[0]}_thumbnail.jpg"
@@ -84,17 +121,31 @@ class TargetFileHandler(FileSystemEventHandler):
                 self.queue_event(event)
         except Exception as e:
             print('Error in file monitoring:', e)
-            logging.info('[!] Error in file monitoring:', e)
+            logging.info('[!] Error in file monitoring: %s', e)
 
     def on_modified(self, event):
         """ファイルが追加または変更された場合に呼び出されます。"""
         try:
+            # ディレクトリの場合はスキップ
+            if event.is_directory:
+                return
+
             if event.src_path.endswith(tuple(patterns)):
+                # 既に処理済みのファイルはスキップ
+                if event.src_path in self.processed_files:
+                    logging.debug(f"スキップ（既に処理済み）: {event.src_path}")
+                    return
+
+                # 処理済みリストに追加
+                self.processed_files.add(event.src_path)
+
                 # リストを更新
                 if event.src_path not in target_files:
                     target_files.append(event.src_path)
+
                 # 文字抽出を実行
                 self.extract_texts(event.src_path)
+
                 # メッセージ送信キューに追加
                 self.queue_event(event)
         except Exception as e:
@@ -128,9 +179,26 @@ class TargetFileHandler(FileSystemEventHandler):
             text_logger.error(
                 f'ファイル処理失敗: {os.path.basename(file_path)} - エラー: {e}')
 
+    def reset_processed_files(self):
+        """
+        一定時間後に処理済みファイルリストをリセットします。
+        長時間実行時のメモリ使用量を抑えるために使用します。
+        このメソッドは定期的に呼び出されるべきです。
+        """
+        # 現在の時刻からn時間前（例：1時間前）に追加されたファイルを対象とする場合、
+        # タイムスタンプとともに保存する必要があります。
+        # 簡易実装として、単にリストをクリアします。
+        file_count = len(self.processed_files)
+        if file_count > 1000:  # ファイル数が1000を超えた場合にリセット
+            logging.info(f"処理済みファイルリストをリセットします（{file_count}ファイル）")
+            self.processed_files.clear()
+
     def list_files(self, start_path):
         """指定したディレクトリ（およびそのサブディレクトリ）内のすべてのファイルを一覧表示します。"""
-        try:            # 起動時にファイルを読み込んだときのUDP送信
+        try:
+            # 処理済みファイルリストをリセット
+            self.reset_processed_files()
+
             logging.info('===============')
             logging.info(f'Starting to monitor the directory: {start_path}')
 
@@ -166,6 +234,8 @@ def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
             if file.endswith(tuple(patterns)):
                 file_path = os.path.join(start_path, file)
                 filelist.append(file_path)
+                # 処理済みリストに追加
+                event_handler.processed_files.add(file_path)
                 event_handler.extract_texts(file_path)
     else:
         for root, dirs, files in os.walk(start_path):
@@ -177,4 +247,6 @@ def set_filehandle(event_handler, start_path, exclude_subdirectories, filelist):
                     if file.endswith(tuple(patterns)):
                         file_path = os.path.join(root, file)
                         filelist.append(file_path)
+                        # 処理済みリストに追加
+                        event_handler.processed_files.add(file_path)
                         event_handler.extract_texts(file_path)
