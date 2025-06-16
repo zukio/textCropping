@@ -63,8 +63,12 @@ class TargetFileHandler(FileSystemEventHandler):
         """指定された画像から文字部分を抽出します。"""
         try:
             output_path = TextExtractor(self.output_dir).extract_texts(file_path)
-            print(f'Text extraction succeeded: {output_path}')
-            logging.info(f'Text extraction succeeded: {output_path}')
+            if output_path:
+                print(f'Text extraction succeeded: {output_path}')
+                logging.info(f'Text extraction succeeded: {output_path}')
+            else:
+                print('No text detected. Skipped saving image.')
+                logging.info('No text detected. Skipped saving image.')
         except Exception as e:
             print('Text extraction failed: %s', e)
             logging.info('[!] Text extraction failed: %s', e)

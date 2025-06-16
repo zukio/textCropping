@@ -102,11 +102,17 @@ class TargetFileHandler(FileSystemEventHandler):
         try:
             output_path = TextExtractor(
                 self.output_dir).extract_texts(file_path)
-            print(f'Text extraction succeeded: {output_path}')
-            logging.info(f'Text extraction succeeded: {output_path}')
-            # 文字検出ログにもファイル処理の成功を記録
-            text_logger.info(
-                f'ファイル処理完了: {os.path.basename(file_path)} -> {os.path.basename(output_path)}')
+            if output_path:
+                print(f'Text extraction succeeded: {output_path}')
+                logging.info(f'Text extraction succeeded: {output_path}')
+                # 文字検出ログにもファイル処理の成功を記録
+                text_logger.info(
+                    f'ファイル処理完了: {os.path.basename(file_path)} -> {os.path.basename(output_path)}')
+            else:
+                print('No text detected. Skipped saving image.')
+                logging.info('No text detected. Skipped saving image.')
+                text_logger.info(
+                    f'ファイル処理スキップ: {os.path.basename(file_path)} - 文字なし')
         except Exception as e:
             print('Text extraction failed:', e)
             logging.info('[!] Text extraction failed: %s', e)
