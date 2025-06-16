@@ -246,7 +246,8 @@ class TextExtractor:
 
         # ----- 文字領域以外を白で塗りつぶす -----
         filled = img.copy()
-        filled[mask == 0] = (255, 255, 255)
+        # pytesseract.image_to_boxes の精度が低いため、この工程はスキップ
+        # filled[mask == 0] = (255, 255, 255)
 
         # ----- 二値化してテキストだけのマスクを作成 -----
         gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
@@ -263,6 +264,7 @@ class TextExtractor:
         # 小さなノイズを除去
         kernel = np.ones((3, 3), np.uint8)
         text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_OPEN, kernel)
+
         # ----- マスクを用いて元画像から文字部分のみ抽出 -----
         masked = cv2.bitwise_and(img, img, mask=text_mask)
 
