@@ -4,6 +4,7 @@ import signal
 import argparse
 import asyncio
 import threading
+import json
 from aioconsole import ainput
 from watchdog.observers import Observer
 from PIL import Image, ImageDraw
@@ -80,6 +81,8 @@ if __name__ == "__main__":
     # 引数 --exclude_subdirectories が指定された場合、ルートディレクトリのみが監視されます。引数が指定されていない場合、サブディレクトリも監視します。
     parser = argparse.ArgumentParser(
         description='Monitor a directory and create thumbnails for video files.')
+    parser.add_argument('--config', default='config.json', type=str,
+                        help='Path to configuration file')
     parser.add_argument('--exclude_subdirectories', default=False, action='store_true',
                         help='Exclude subdirectories in monitoring and thumbnail creation.')
     parser.add_argument('--target', default='', type=str,
@@ -96,8 +99,27 @@ if __name__ == "__main__":
                         help='Directory path to save processed files')
     parser.add_argument('--no_console', action='store_true',
                         help='Run in background mode without console input')
+    parser.add_argument('--disable_udp', action='store_true',
+                        help='Disable UDP notifications')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
+    config = {}
+    if os.path.isfile(args.config):
+        with open(args.config, 'r', encoding='utf-8') as f:
+            try:
+                config = json.load(f)
+            except Exception:
+                config = {}
+
+    # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
+    for key in ['exclude_subdirectories', 'target', 'seconds', 'ip', 'port', 'delay', 'output_dir', 'no_console']:
+        if getattr(args, key) == parser.get_default(key) and key in config:
+            setattr(args, key, config[key])
+
+    if args.disable_udp == parser.get_default('disable_udp'):
+        use_udp = config.get('use_udp', True)
+    else:
+        use_udp = not args.disable_udp
     path = os.path.abspath(args.target) if args.target else os.path.abspath(
         os.path.join(os.getcwd(), os.pardir))
 
@@ -133,7 +155,7 @@ if __name__ == "__main__":
     udp_sender = DelayedUDPSender(args.delay)
     # [UDP] ファイルが変更されるたびにudp_sender.send_udp_messageが呼び出され、UDPメッセージが適切なタイミングで送信されます。
     event_handler = TargetFileHandler(
-        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds, output_dir)
+        args.exclude_subdirectories, udp_sender, args.ip, args.port, args.seconds, output_dir, use_udp)
 
     # サーバーとの通信を試みる
     response = hello_server(path)

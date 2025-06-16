@@ -18,7 +18,7 @@ setup_logging()
 class TargetFileHandler(FileSystemEventHandler):
     """新たな対象ファイルの追加または既存の対象ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
 
-    def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir):
+    def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir, use_udp=True):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.ip = ip
@@ -27,14 +27,18 @@ class TargetFileHandler(FileSystemEventHandler):
         self.event_queue = []  # イベントキューを追加
         self.seconds = seconds
         self.output_dir = output_dir
+        self.use_udp = use_udp
 
     def destroy(self, reason):
         # 終了メッセージをUDPで送信する
-        self.sender.send_message(self.ip, self.port, reason)
+        if self.use_udp:
+            self.sender.send_message(self.ip, self.port, reason)
         print(reason)
         logging.info(reason)
 
     def use_udp(self):
+        if not self.use_udp:
+            return
         try:
             # イベントキューが空でない場合にUDPメッセージを送信
             if self.event_queue:
@@ -48,7 +52,8 @@ class TargetFileHandler(FileSystemEventHandler):
                     "events": events,
                     "files": target_files
                 })
-                self.sender.send_message(self.ip, self.port, message)
+                if self.use_udp:
+                    self.sender.send_message(self.ip, self.port, message)
                 self.event_queue.clear()  # イベントキューをクリア
 
         except Exception as e:
@@ -57,8 +62,9 @@ class TargetFileHandler(FileSystemEventHandler):
 
     def queue_event(self, event):
         # メッセージ送信キューに追加
-        self.event_queue.append(event)
-        self.use_udp()
+        if self.use_udp:
+            self.event_queue.append(event)
+            self.use_udp()
 
     # def on_created(self, event):
 
@@ -117,10 +123,11 @@ class TargetFileHandler(FileSystemEventHandler):
             logging.info(f'Starting to monitor the directory: {start_path}')
             set_filehandle(self, start_path,
                            self.exclude_subdirectories, target_files)
-            self.sender.send_message(self.ip, self.port, json.dumps({
-                "events": [{"type": "Startup", "path": ""}],
-                "files": target_files
-            }))
+            if self.use_udp:
+                self.sender.send_message(self.ip, self.port, json.dumps({
+                    "events": [{"type": "Startup", "path": ""}],
+                    "files": target_files
+                }))
         except Exception as e:
             print('Error in listing files: %s', e)
             logging.info('[!] Error in listing files: %s', e)
