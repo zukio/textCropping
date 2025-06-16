@@ -251,6 +251,7 @@ class TextExtractor:
 
         # ----- 二値化してテキストだけのマスクを作成 -----
         gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
+
         otsu_thresh, _ = cv2.threshold(gray_mask, 0, 255,
                                        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
