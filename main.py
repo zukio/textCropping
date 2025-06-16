@@ -120,10 +120,8 @@ if __name__ == "__main__":
         use_udp = config.get('use_udp', True)
     else:
         use_udp = not args.disable_udp
-    path = os.path.abspath(args.target) if args.target else os.path.abspath(
-        os.path.join(os.getcwd(), os.pardir))
-
-    # 出力先ディレクトリの設定
+    path = os.path.abspath(
+        args.target) if args.target else os.path.abspath(os.getcwd())
     if args.output_dir:
         output_dir = os.path.abspath(args.output_dir)
     else:
@@ -136,9 +134,13 @@ if __name__ == "__main__":
         print(f"Created output directory: {output_dir}")
 
     # 出力先と監視対象が同じ場合はエラー
-    if output_dir == path:
-        print('Output directory must be different from the target directory.')
-        sys.exit(1)
+    if os.path.normpath(output_dir) == os.path.normpath(path):
+        print('警告: 出力ディレクトリと監視対象ディレクトリが同じです。')
+        print('出力先を監視対象の親ディレクトリに変更します。')
+        output_dir = os.path.join(os.path.dirname(path), 'output')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        print(f"新しい出力ディレクトリ: {output_dir}")
 
     # 既に起動しているインスタンスをチェックする
     if check_existing_instance(12321, path):

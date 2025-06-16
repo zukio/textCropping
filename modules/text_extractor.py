@@ -95,10 +95,23 @@ class TextExtractor:
             text_logger.info(f"ファイル: {base_name} - 文字検出なし")
 
         rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
-        rgba[:, :, 3] = mask
+        rgba[:, :, 3] = mask        # 出力先ディレクトリの処理
+        if self.output_dir:
+            # 出力先が指定されている場合はそこを使用
+            out_dir = self.output_dir
+        else:
+            # 指定がない場合は入力ファイルの親ディレクトリの'output'フォルダを使用
+            parent_dir = os.path.dirname(os.path.dirname(file_path))
+            out_dir = os.path.join(parent_dir, 'output')
 
-        # 出力先ディレクトリが指定されている場合はそこで保存する
-        out_dir = self.output_dir or os.path.dirname(file_path)
+        # 出力先ディレクトリが監視対象ディレクトリと同じかチェック
+        file_dir = os.path.dirname(file_path)
+        if os.path.normpath(file_dir) == os.path.normpath(out_dir):
+            text_logger.warning(f"出力先ディレクトリが監視対象と同じです: {out_dir}")
+            # 安全な代替として親ディレクトリの'output'フォルダを使用
+            out_dir = os.path.join(os.path.dirname(file_dir), 'output')
+            text_logger.info(f"出力先を変更しました: {out_dir}")
+
         if not os.path.exists(out_dir):
             os.makedirs(out_dir, exist_ok=True)
 
