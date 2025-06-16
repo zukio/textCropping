@@ -12,7 +12,14 @@ REM 仮想環境の activate
 call .venv\Scripts\activate.bat
 
 REM Pythonスクリプト実行
-python main.py --target "." --output_dir "..\output"
+python main.py 
+--ignore_subfolders false ^
+--ip localhost ^
+--port 12345 ^
+--send_interval 1 ^
+--single_instance_only true ^
+--target "." ^
+--output_dir "..\output"
 
 REM エラーコードを返す
 exit /b %ERRORLEVEL%
