@@ -9,4 +9,4 @@ urllib3==2.0.3
 watchdog==3.0.0
 opencv-python
 pytesseract
-pystray
+pystray==0.19.4

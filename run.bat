@@ -12,6 +12,7 @@ REM 仮想環境の activate
 call .venv\Scripts\activate.bat
 
 REM Pythonスクリプト実行
-python main.py
+python main.py --target "." --output_dir "..\output"
 
-pause
+REM エラーコードを返す
+exit /b %ERRORLEVEL%

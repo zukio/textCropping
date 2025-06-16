@@ -44,18 +44,26 @@ def setup_tray(exit_callback):
 async def main(args):
     try:
         # プロセスサーバのタスクを開始する
+        global server_task
         server_task = asyncio.create_task(start_server(12321, path))
 
         # ファイルのリストを取得する
         event_handler.list_files(path)
 
-        # 以下に後続の処理を記述する
-        while True:
-            command = await ainput("Enter a command exit: ")
-            if command.lower() == "exit":
-                exit_handler("[Exit] Command Exit")
-                break
-            await asyncio.sleep(1)
+        if args.no_console:
+            # バックグラウンドモード（コンソール入力なし）
+            print("バックグラウンドモードで実行中です。タスクトレイアイコンから終了できます。")
+            while True:
+                await asyncio.sleep(1)
+        else:
+            # 開発モード（コンソール入力あり）
+            print("開発モードで実行中です。コンソールに「exit」と入力するか、タスクトレイアイコンから終了できます。")
+            while True:
+                command = await ainput("Enter a command exit: ")
+                if command.lower() == "exit":
+                    exit_handler("[Exit] Command Exit")
+                    break
+                await asyncio.sleep(1)
 
         # プロセスサーバのタスクが完了するまで待機する
         await server_task
@@ -86,6 +94,8 @@ if __name__ == "__main__":
                         help='Delay in seconds for sending UDP messages')
     parser.add_argument('--output_dir', default='', type=str,
                         help='Directory path to save processed files')
+    parser.add_argument('--no_console', action='store_true',
+                        help='Run in background mode without console input')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
     path = os.path.abspath(args.target) if args.target else os.path.abspath(
@@ -137,16 +147,30 @@ if __name__ == "__main__":
     observer = Observer()
     observer.schedule(event_handler, path,
                       recursive=not args.exclude_subdirectories)
-    observer.start()
+    observer.start()    # 終了処理
 
-    # 終了処理
     def exit_handler(reason):
+        global tray_icon, server_task
+        print(f"終了処理を開始します: {reason}")
+
+        # 監視を停止
+        observer.stop()
+        observer.join(timeout=1.0)  # 最大1秒間待機
+
+        # ファイルハンドラのクリーンアップ
         result = event_handler.destroy(reason)
-        # remove_pid_file()
+
+        # トレイアイコンを停止
         if tray_icon:
+            print("トレイアイコンを停止します")
             tray_icon.stop()
+
+        # サーバータスクをキャンセル
         if server_task:
+            print("サーバータスクをキャンセルします")
             server_task.cancel()
+
+        print(f"終了コード: {result}")
         sys.exit(result)
 
     # プログラムが終了する際に呼び出されるハンドラを登録する
@@ -158,13 +182,9 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_wrapper("[Exit] Signal Interrupt"))
 
     # タスクトレイアイコンを表示する
-    tray_icon = setup_tray(exit_handler)
-
-    # アプリケーションのメイン処理
+    tray_icon = setup_tray(exit_handler)    # アプリケーションのメイン処理
     try:
         asyncio.run(main(args))
     except KeyboardInterrupt:
         # 例外処理
-        observer.stop()
         exit_handler("[Exit] Keyboard Interrupt")
-    observer.join()
