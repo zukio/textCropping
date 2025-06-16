@@ -5,6 +5,7 @@ import pytesseract
 import numpy as np
 import datetime
 import logging
+import json
 
 # ログの設定
 
@@ -55,6 +56,120 @@ class TextExtractor:
     def __init__(self, output_dir=None):
         """Create extractor with optional output directory."""
         self.output_dir = output_dir
+        self.ocr_engine = "tesseract"
+        self.easyocr_reader = None
+
+        # 設定ファイルからOCRエンジンを読み込む
+        config_path = os.path.join(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))), 'config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.ocr_engine = config.get('ocr_engine', "tesseract")
+            except Exception as e:
+                text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
+                self.ocr_engine = "tesseract"
+
+    def _init_easyocr(self):
+        """EasyOCRを初期化する"""
+        if self.easyocr_reader is None:
+            try:
+                import easyocr
+                text_logger.info("EasyOCRを初期化しています...")
+                self.easyocr_reader = easyocr.Reader(['ja', 'en'])
+                text_logger.info("EasyOCRの初期化が完了しました")
+                return True
+            except ImportError:
+                text_logger.error("EasyOCRがインストールされていません。Tesseractを使用します。")
+                self.ocr_engine = "tesseract"
+                return False
+            except Exception as e:
+                text_logger.error(f"EasyOCRの初期化中にエラーが発生しました: {e}")
+                self.ocr_engine = "tesseract"
+                return False
+        return True
+
+    def extract_texts_with_easyocr(self, img):
+        """EasyOCRを使用してテキストを抽出"""
+        if not self._init_easyocr():
+            return None, None, 0
+
+        h, w = img.shape[:2]
+
+        try:
+            # EasyOCRでテキスト検出（信頼度の閾値を下げる）
+            results = self.easyocr_reader.readtext(
+                img, detail=1, paragraph=False, min_size=10)
+
+            if not results:
+                text_logger.info("EasyOCRでテキストが検出されませんでした")
+                return None, None, 0
+
+            texts = []
+            boxes_list = []
+            char_count = 0
+
+            # 検出されたテキストを処理
+            for bbox, text, conf in results:
+                if conf > 0.1:  # 信頼度の閾値を下げる（より多くのテキストを検出）
+                    if text and text.strip():  # 空のテキストをスキップ
+                        texts.append(text)
+                        char_count += len(text)
+
+                        try:
+                            # ボックス情報をTesseractと互換性のある形式に変換
+                            # 座標が空や不正でないことを確認
+                            if len(bbox) != 4 or any(not isinstance(point, (list, tuple)) or len(point) != 2 for point in bbox):
+                                text_logger.warning(f"無効なbbox形式: {bbox}")
+                                continue
+
+                            x1, y1 = int(float(bbox[0][0])), int(
+                                float(bbox[0][1]))
+                            x2, y2 = int(float(bbox[2][0])), int(
+                                float(bbox[2][1]))
+
+                            # 座標値が有効な範囲内かチェック
+                            if 0 <= x1 < w and 0 <= y1 < h and 0 <= x2 < w and 0 <= y2 < h:
+                                # 各文字に対して行を作成
+                                for i, char in enumerate(text):
+                                    if not char or char.isspace():  # 空文字や空白はスキップ
+                                        continue
+
+                                    # 0除算を防ぐ
+                                    text_len = max(len(text.strip()), 1)
+                                    char_width = max((x2 - x1) / text_len, 1)
+
+                                    char_x1 = max(int(x1 + i * char_width), 0)
+                                    char_x2 = min(
+                                        int(x1 + (i + 1) * char_width), w-1)
+
+                                    # 有効なボックスのみ追加
+                                    if char_x1 < char_x2:
+                                        boxes_list.append(
+                                            f"{char} {char_x1} {h-y2} {char_x2} {h-y1}")
+                        except (ValueError, TypeError, IndexError, ZeroDivisionError) as e:
+                            text_logger.warning(
+                                f"ボックス座標の処理中にエラー: {e}, bbox={bbox}, text={text}")
+                            continue
+
+            detected_text = "\n".join(texts)
+            boxes = "\n".join(boxes_list)
+
+            text_logger.info(
+                f"EasyOCRで検出されたテキスト数: {len(texts)}, 文字数: {char_count}")
+
+            if not boxes_list:
+                text_logger.warning("有効なボックス情報が生成されませんでした")
+                return None, None, 0
+
+            return detected_text, boxes, char_count
+
+        except Exception as e:
+            text_logger.error(f"EasyOCRでのテキスト検出中にエラーが発生しました: {e}")
+            import traceback
+            text_logger.error(f"詳細なエラー: {traceback.format_exc()}")
+            return None, None, 0
 
     def extract_texts(self, file_path):
         img = cv2.imread(file_path, cv2.IMREAD_COLOR)
@@ -62,22 +177,47 @@ class TextExtractor:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         h, w = img.shape[:2]
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # 文字をテキストとして検出（ロギング用）
-        detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
+        # 設定に基づいてOCRエンジンを選択
+        if self.ocr_engine == "easyocr":
+            # EasyOCRを使用する
+            detected_text, boxes, char_count = self.extract_texts_with_easyocr(
+                img)
 
-        # 文字のバウンディングボックスを取得
-        boxes = pytesseract.image_to_boxes(gray)
+            # EasyOCRが失敗した場合はTesseractにフォールバック
+            if detected_text is None or boxes is None:
+                text_logger.info("EasyOCRでの検出に失敗しました。Tesseractを使用します。")
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                detected_text = pytesseract.image_to_string(
+                    gray, lang='jpn+eng')
+                boxes = pytesseract.image_to_boxes(gray)
+
+                # 文字数を再計算
+                char_count = 0
+                for b in boxes.splitlines():
+                    parts = b.split(' ')
+                    if len(parts) >= 5:
+                        char_count += 1
+
+        else:
+            # デフォルト: Tesseractを使用
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
+            boxes = pytesseract.image_to_boxes(gray)
+
+            # 検出された文字の数をカウント
+            char_count = 0
+            for b in boxes.splitlines():
+                parts = b.split(' ')
+                if len(parts) >= 5:
+                    char_count += 1
+
+        # マスク画像を作成
         mask = np.zeros((h, w), dtype=np.uint8)
-
-        # 検出された文字の数をカウント
-        char_count = 0
 
         for b in boxes.splitlines():
             parts = b.split(' ')
             if len(parts) >= 5:
-                char_count += 1
                 x1, y1, x2, y2 = map(int, parts[1:5])
                 # Tesseract's origin is at bottom-left
                 mask[h - y2:h - y1, x1:x2] = 255
@@ -88,7 +228,7 @@ class TextExtractor:
             msg = f"ファイル: {base_name} - 文字検出: {char_count}文字"
             text_logger.info(msg)
             logging.info(msg)
-            if detected_text.strip():
+            if detected_text and detected_text.strip():
                 text = detected_text.strip()
                 # 検出されたテキストを改行ごとに分割してログに記録
                 text_logger.info(f"検出テキスト: \n{text}")

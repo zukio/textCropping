@@ -10,3 +10,5 @@ watchdog==3.0.0
 opencv-python
 pytesseract
 pystray==0.19.4
+# 高精度OCR用追加ライブラリ（オプション）
+easyocr
