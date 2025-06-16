@@ -262,15 +262,18 @@ class TextExtractor:
 
         # ----- 文字領域以外を白で塗りつぶす -----
         filled = img.copy()
+
         filled[mask == 0] = (255, 255, 255)
 
         # ----- 二値化してテキストだけのマスクを作成 -----
         gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
+
         otsu_thresh, _ = cv2.threshold(gray_mask, 0, 255,
                                        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         # Otsuで求めた値より少し高い閾値を設定して非文字部分を除去
-        strict_thresh = min(255, otsu_thresh + 20)
+        strict_thresh = min(255, otsu_thresh)
+
         _, binary = cv2.threshold(gray_mask, strict_thresh, 255,
                                   cv2.THRESH_BINARY)
         text_mask = cv2.bitwise_not(binary)
