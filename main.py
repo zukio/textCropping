@@ -134,8 +134,11 @@ if __name__ == "__main__":
         print(f"Created output directory: {output_dir}")
 
     # 出力先と監視対象が同じ場合はエラー
-    if os.path.normpath(output_dir) == os.path.normpath(path):
-        print('警告: 出力ディレクトリと監視対象ディレクトリが同じです。')
+    from modules.utils.path_utils import is_subpath
+
+    # 出力先が監視対象パス内に含まれていないかチェック
+    if is_subpath(output_dir, path):
+        print('警告: 出力ディレクトリが監視対象ディレクトリ内にあります。')
         print('出力先を監視対象の親ディレクトリに変更します。')
         output_dir = os.path.join(os.path.dirname(path), 'output')
         if not os.path.exists(output_dir):

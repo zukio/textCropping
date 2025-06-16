@@ -120,11 +120,12 @@ class TargetFileHandler(FileSystemEventHandler):
             logging.info('===============')
             logging.info(f'Starting to monitor the directory: {start_path}')
 
-            # 出力ディレクトリのチェック - 監視対象と同じディレクトリに出力しないようにする
+            # 出力ディレクトリが監視対象パス内に含まれていないかチェック
             if self.output_dir:
-                if os.path.normpath(self.output_dir) == os.path.normpath(start_path):
+                from modules.utils.path_utils import is_subpath
+                if is_subpath(self.output_dir, start_path):
                     logging.warning(
-                        f"警告: 出力先ディレクトリが監視対象と同じです: {self.output_dir}")
+                        f"警告: 出力先ディレクトリが監視対象内です: {self.output_dir}")
                     logging.warning("出力先を監視対象の親ディレクトリに変更します")
                     self.output_dir = os.path.join(
                         os.path.dirname(start_path), 'output')
