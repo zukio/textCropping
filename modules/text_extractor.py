@@ -71,9 +71,6 @@ class TextExtractor:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     self.ocr_engine = config.get('ocr_engine', "tesseract")
-                    self.crop = config.get('crop', self.crop)
-                    self.color_mode = config.get('color_mode', self.color_mode)
-                    self.mono_color = config.get('color', self.mono_color)
             except Exception as e:
                 text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
                 self.ocr_engine = "tesseract"
