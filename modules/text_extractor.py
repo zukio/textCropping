@@ -250,6 +250,7 @@ class TextExtractor:
 
         # ----- 二値化してテキストだけのマスクを作成 -----
         gray_mask = cv2.cvtColor(filled, cv2.COLOR_BGR2GRAY)
+
         otsu_thresh, _ = cv2.threshold(gray_mask, 0, 255,
                                        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
@@ -262,7 +263,6 @@ class TextExtractor:
         # 小さなノイズを除去
         kernel = np.ones((3, 3), np.uint8)
         text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_OPEN, kernel)
-
         # ----- マスクを用いて元画像から文字部分のみ抽出 -----
         masked = cv2.bitwise_and(img, img, mask=text_mask)
 
