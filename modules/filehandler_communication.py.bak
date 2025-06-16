@@ -90,24 +90,19 @@ class TargetFileHandler(FileSystemEventHandler):
                 self.queue_event(event)
         except Exception as e:
             print('Error in file monitoring:', e)
-            logging.info('[!] Error in file monitoring:', e)
-
-    def extract_texts(self, file_path):
+            logging.info('[!] Error in file monitoring:', e)    def extract_texts(self, file_path):
         """指定された画像から文字部分を抽出します。"""
         try:
-            output_path = TextExtractor(
-                self.output_dir).extract_texts(file_path)
+            output_path = TextExtractor(self.output_dir).extract_texts(file_path)
             print(f'Text extraction succeeded: {output_path}')
             logging.info(f'Text extraction succeeded: {output_path}')
             # 文字検出ログにもファイル処理の成功を記録
-            text_logger.info(
-                f'ファイル処理完了: {os.path.basename(file_path)} -> {os.path.basename(output_path)}')
+            text_logger.info(f'ファイル処理完了: {os.path.basename(file_path)} -> {os.path.basename(output_path)}')
         except Exception as e:
             print('Text extraction failed:', e)
             logging.info('[!] Text extraction failed: %s', e)
             # 文字検出ログにもエラーを記録
-            text_logger.error(
-                f'ファイル処理失敗: {os.path.basename(file_path)} - エラー: {e}')
+            text_logger.error(f'ファイル処理失敗: {os.path.basename(file_path)} - エラー: {e}')
 
     def list_files(self, start_path):
         """指定したディレクトリ（およびそのサブディレクトリ）内のすべてのファイルを一覧表示します。"""

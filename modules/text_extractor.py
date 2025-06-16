@@ -3,7 +3,39 @@ import cv2
 import shutil
 import pytesseract
 import numpy as np
+import datetime
+import logging
 
+# ログの設定
+
+
+def setup_text_logging():
+    """文字検出用のログ設定を行います"""
+    log_dir = os.path.join(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))), 'logs')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    text_logger = logging.getLogger('text_detection')
+    text_logger.setLevel(logging.INFO)
+
+    # 日付ごとに新しいログファイルを作成
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    log_file = os.path.join(log_dir, f'text_detection_{today}.log')
+
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+
+    # ハンドラが既に存在する場合は追加しない
+    if not text_logger.handlers:
+        text_logger.addHandler(file_handler)
+
+    return text_logger
+
+
+# テキスト検出用のロガーを初期化
+text_logger = setup_text_logging()
 
 # 優先順位：
 # 1. 環境変数で TESSERACT_PATH があればそれを使う
@@ -31,15 +63,36 @@ class TextExtractor:
 
         h, w = img.shape[:2]
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # 文字をテキストとして検出（ロギング用）
+        detected_text = pytesseract.image_to_string(gray, lang='jpn+eng')
+
+        # 文字のバウンディングボックスを取得
         boxes = pytesseract.image_to_boxes(gray)
         mask = np.zeros((h, w), dtype=np.uint8)
+
+        # 検出された文字の数をカウント
+        char_count = 0
 
         for b in boxes.splitlines():
             parts = b.split(' ')
             if len(parts) >= 5:
+                char_count += 1
                 x1, y1, x2, y2 = map(int, parts[1:5])
                 # Tesseract's origin is at bottom-left
                 mask[h - y2:h - y1, x1:x2] = 255
+
+        # 文字検出結果をログに記録
+        base_name = os.path.basename(file_path)
+        if char_count > 0:
+            text_logger.info(f"ファイル: {base_name} - 文字検出: {char_count}文字")
+            if detected_text.strip():
+                # 検出されたテキストを改行ごとに分割してログに記録
+                text_logger.info(f"検出テキスト: \n{detected_text.strip()}")
+            else:
+                text_logger.info("テキスト認識できませんでした（ボックスのみ検出）")
+        else:
+            text_logger.info(f"ファイル: {base_name} - 文字検出なし")
 
         rgba = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
         rgba[:, :, 3] = mask
