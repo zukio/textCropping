@@ -255,7 +255,7 @@ class TextExtractor:
                                        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         # Otsuで求めた値より少し高い閾値を設定して非文字部分を除去
-        strict_thresh = min(255, otsu_thresh + 20)
+        strict_thresh = min(255, otsu_thresh)
         _, binary = cv2.threshold(gray_mask, strict_thresh, 255,
                                   cv2.THRESH_BINARY)
         text_mask = cv2.bitwise_not(binary)
