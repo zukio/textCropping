@@ -1,0 +1,11 @@
+{
+  "exclude_subdirectories": false,
+  "target": "",
+  "seconds": 1,
+  "ip": "localhost",
+  "port": 12345,
+  "delay": 1,
+  "output_dir": "",
+  "no_console": false,
+  "use_udp": true
+}
