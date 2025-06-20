@@ -19,7 +19,8 @@ class TargetFileHandler(FileSystemEventHandler):
     """新たな対象ファイルの追加または既存の対象ファイルの変更を監視し、文字部分のみを抽出した透過PNGを生成します。"""
 
     def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir,
-                 crop=False, color_mode="original", mono_color="#000000", enable_udp=True):
+                 crop=False, color_mode="original", mono_color="#000000", enable_udp=True,
+                 ocr_engine="tesseract"):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.ip = ip
@@ -32,6 +33,7 @@ class TargetFileHandler(FileSystemEventHandler):
         self.crop = crop
         self.color_mode = color_mode
         self.mono_color = mono_color
+        self.ocr_engine = ocr_engine
 
         # 処理済みファイルを追跡するためのセット
         self.processed_files = set()
@@ -159,7 +161,8 @@ class TargetFileHandler(FileSystemEventHandler):
                 self.output_dir,
                 crop=self.crop,
                 color_mode=self.color_mode,
-                mono_color=self.mono_color
+                mono_color=self.mono_color,
+                ocr_engine=self.ocr_engine
             ).extract_texts(file_path)
             if output_path:
                 print(f'Text extraction succeeded: {output_path}')
