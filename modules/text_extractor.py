@@ -338,9 +338,9 @@ class TextExtractor:
                 width = x2 - x1
                 height = y2 - y1
                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-
-                new_width = int(round(width * self.box_scale))
-                new_height = int(round(height * self.box_scale))
+                box_scale = 1.2  # ボックス拡大率
+                new_width = int(round(width * box_scale))
+                new_height = int(round(height * box_scale))
 
                 new_x1 = max(0, cx - new_width // 2)
                 new_y1 = max(0, cy - new_height // 2)
@@ -397,7 +397,7 @@ class TextExtractor:
         binary_mean = np.mean(binary_img)
         text_logger.info(f"二値化画像の平均値: {binary_mean}")
 
-        if binary_mean > 127:
+        if binary_mean > 170:
             # 文字が白の場合は反転
             final_mask = cv2.bitwise_not(binary_img)
             text_logger.info("二値化画像の文字は白です（反転して使用）")
@@ -411,9 +411,13 @@ class TextExtractor:
         refined_mask = cv2.bitwise_and(final_mask, text_mask)
 
         # マスクの微調整（小さなノイズを除去、文字の連結を強化）
-        kernel = np.ones((self.morph_kernel_size, self.morph_kernel_size), np.uint8)
-        refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_OPEN, kernel)
-        refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel)
+        # morph_kernel_size = 2
+        # kernel = np.ones(
+        #    (morph_kernel_size, morph_kernel_size), np.uint8)
+        # refined_mask = cv2.morphologyEx(
+        #    refined_mask, cv2.MORPH_OPEN, kernel)
+        # refined_mask = cv2.morphologyEx(
+        #    refined_mask, cv2.MORPH_CLOSE, kernel)
 
         # デバッグ用に最終マスクを保存
         mask_path = os.path.join(debug_dir, f"{base_name}_text_mask.jpg")
@@ -486,9 +490,11 @@ class TextExtractor:
         text_logger.info("ノイズ除去処理を適用しています...")
 
         # ガウシアンフィルタでノイズを低減
+        morph_kernel_size = 3
         # メディアンフィルタで塩コショウノイズを除去
-        blur = cv2.GaussianBlur(image, (3, 3), 0)
-        median = cv2.medianBlur(blur, 3)
+        blur = cv2.GaussianBlur(
+            image, (morph_kernel_size, morph_kernel_size), 0)
+        median = cv2.medianBlur(blur, morph_kernel_size)
 
         return median
 
@@ -566,9 +572,10 @@ class TextExtractor:
         # 背景を白に
         adjusted_bgr[thresh == 255] = [255, 255, 255]
         # テキスト部分の黒をより強調（オプション）
-        # dark_regions = dark_mask == 255
-        # for c in range(3):
-        #     adjusted_bgr[:,:,c][dark_regions] = adjusted_bgr[:,:,c][dark_regions] * 0.8
+        dark_regions = dark_mask == 255
+        for c in range(3):
+            adjusted_bgr[:, :, c][dark_regions] = adjusted_bgr[:,
+                                                               :, c][dark_regions] * 0.8
 
         return adjusted_bgr
 
@@ -592,12 +599,15 @@ class TextExtractor:
         else:
             gray = image
 
+        morph_kernel_size = 2
         # 線を強調するためにガウシアンブラーを適用
         # これにより細い線の連続性が向上します
-        gray = cv2.GaussianBlur(gray, (3, 3), 0)
+        gray = cv2.GaussianBlur(
+            gray, (morph_kernel_size+1, morph_kernel_size+1), 0)
 
         # 線を太くするための前処理を適用
-        kernel_dilate = np.ones((2, 2), np.uint8)
+        kernel_dilate = np.ones(
+            (morph_kernel_size, morph_kernel_size), np.uint8)
         gray = cv2.dilate(gray, kernel_dilate, iterations=1)
 
         # 単純な二値化（Otsuの方法で閾値を自動決定）
@@ -605,10 +615,11 @@ class TextExtractor:
             gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
         # 小さなノイズを除去と文字の連結
-        kernel_open = np.ones((2, 2), np.uint8)
+        kernel_open = np.ones((morph_kernel_size, morph_kernel_size), np.uint8)
         binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel_open)
         # 文字の連結を強化
-        kernel_close = np.ones((2, 2), np.uint8)
+        kernel_close = np.ones(
+            (morph_kernel_size, morph_kernel_size), np.uint8)
         binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel_close)
 
         return binary
@@ -626,7 +637,8 @@ class TextExtractor:
         """
         text_logger.info("画像の前処理を開始します...")
         # ステップ1: ノイズ除去
-        denoised = self.remove_noise(image)
+        # denoised = self.remove_noise(image)
+        denoised = image
 
         # ステップ2: コントラストを上げて背景を飛ばす（明度は上げない）
         brightened = self.enhance_brightness_contrast(
