@@ -1,32 +1,32 @@
 @ECHO OFF
 
-REM ãƒ“ãƒ«ãƒ‰ã‚¹ã‚¯ãƒªãƒ—ãƒˆ - ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã‚’exeãƒ•ã‚¡ã‚¤ãƒ«ã«ãƒ“ãƒ«ãƒ‰ã™ã‚‹
+REM ƒrƒ‹ƒhƒXƒNƒŠƒvƒg - ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ğexeƒtƒ@ƒCƒ‹‚Éƒrƒ‹ƒh‚·‚é
 
 setlocal ENABLEDELAYEDEXPANSION
 CD /D "%~dp0"
 
-REM ä»®æƒ³ç’°å¢ƒã® activate
+REM ‰¼‘zŠÂ‹«‚Ì activate
 call .venv\Scripts\activate.bat
 
-REM å¿…è¦ãªãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ãŒã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã•ã‚Œã¦ã„ã‚‹ã“ã¨ã‚’ç¢ºèª
+REM •K—v‚ÈƒpƒbƒP[ƒW‚ªƒCƒ“ƒXƒg[ƒ‹‚³‚ê‚Ä‚¢‚é‚±‚Æ‚ğŠm”F
 pip install -r requirements.txt --break-system-packages
 pip install pyinstaller --break-system-packages
 
-REM ä»¥å‰ã®ãƒ“ãƒ«ãƒ‰ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ—
+REM ˆÈ‘O‚Ìƒrƒ‹ƒhƒfƒBƒŒƒNƒgƒŠ‚ğƒNƒŠ[ƒ“ƒAƒbƒv
 if exist dist rmdir /s /q dist
 if exist build rmdir /s /q build
 
-REM ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ãƒ“ãƒ«ãƒ‰ï¼ˆã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãªã—ï¼‰
+REM ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ğƒrƒ‹ƒhiƒRƒ“ƒ\[ƒ‹ƒEƒBƒ“ƒhƒE‚È‚µj
 pyinstaller --noconfirm --onefile --windowed ^
   --add-data ".venv\Lib\site-packages\pystray;pystray" ^
   --hidden-import=PIL ^
   --hidden-import=PIL._imagingtk ^
   --hidden-import=PIL._tkinter_finder ^
-  --name="ThumbCrafter" ^
+  --name="textCroping" ^
   main.py -- --no_console
 
 echo.
-echo ãƒ“ãƒ«ãƒ‰ãŒå®Œäº†ã—ã¾ã—ãŸã€‚dist\ThumbCrafter.exeãŒç”Ÿæˆã•ã‚Œã¾ã—ãŸã€‚
+echo ƒrƒ‹ƒh‚ªŠ®—¹‚µ‚Ü‚µ‚½Bdist\textCroping.exe‚ª¶¬‚³‚ê‚Ü‚µ‚½B
 echo.
 
 pause
