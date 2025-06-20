@@ -54,13 +54,16 @@ else:
 
 
 class TextExtractor:
-    def __init__(self, output_dir=None, crop=False, color_mode="original", mono_color="#000000", ocr_engine=None):
+    def __init__(self, output_dir=None, crop=False, color_mode="original",
+                 mono_color="#000000", ocr_engine=None, gcp_credentials=None):
         """Create extractor with optional output directory and options.
 
         Parameters
         ----------
         ocr_engine : str, optional
-            Specify OCR engine to use. Overrides config.json if provided.
+            Specify OCR engine to use.
+        gcp_credentials : str, optional
+            Path to Google Cloud credentials JSON.
         """
         self.output_dir = output_dir
         self.crop = crop
@@ -68,21 +71,9 @@ class TextExtractor:
         self.mono_color = mono_color
         self.ocr_engine = ocr_engine
         self.easyocr_reader = None
-        self.gcp_credentials = None
+        self.gcp_credentials = gcp_credentials
 
-        # 設定ファイルからOCRエンジンを読み込む
-        config_path = os.path.join(os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))), 'config.json')
-        if self.ocr_engine is None and os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    if self.ocr_engine is None:
-                        self.ocr_engine = config.get('ocr_engine')
-                    # self.gcp_credentials = config.get('gcp_credentials')
-            except Exception as e:
-                text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
-
+        # 引数が指定されていない場合はデフォルトのOCRエンジンを使用
         if self.ocr_engine is None:
             self.ocr_engine = "tesseract"
 
@@ -211,9 +202,9 @@ class TextExtractor:
     def extract_texts_with_saas(self, img):
         """Use Google Cloud Vision API to extract texts."""
         try:
-            # if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and self.gcp_credentials:
-            #     if os.path.isfile(self.gcp_credentials):
-            #         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.gcp_credentials
+            if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and self.gcp_credentials:
+                if os.path.isfile(self.gcp_credentials):
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.gcp_credentials
             from modules.ocr_saas_gcp_visionai import extract_text
             detected_text, boxes, char_count = extract_text(img)
             return detected_text, boxes, char_count
