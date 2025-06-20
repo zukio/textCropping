@@ -113,7 +113,6 @@ text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポー�
 
 * RGBA画像の保存先を指定可
 
-
 ### UDP通知
 
 * 出力完了後に、UDP通知を送信する機能
@@ -140,10 +139,6 @@ text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポー�
 * `saas`: Google Cloud Vision API を使用 (オプション)
 
 `config.json` または `--ocr_engine` オプションで OCR エンジンを設定できます:
-
-Google Cloud Vision API を利用する場合は、サービスアカウントキーの JSON ファイル
-を用意し、`config.json` の `gcp_credentials` にそのパスを設定するか、環境変数
-`GOOGLE_APPLICATION_CREDENTIALS` で指定してください。
 
 ## Logs
 
