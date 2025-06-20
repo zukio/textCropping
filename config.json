@@ -1,6 +1,5 @@
 {
 	"exclude_subdirectories": false,
-	"ignore_subfolders": false,
 	"target": "",
 	"seconds": 1,
 	"ip": "localhost",
@@ -14,5 +13,6 @@
 	"crop": false,
 	"color_mode": "original",
 	"color": "#000000",
-	"single_instance_only": false
+	"single_instance_only": false,
+	"debug_output": true
 }

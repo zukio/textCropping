@@ -135,6 +135,8 @@ if __name__ == "__main__":
                         help='Path to Google Cloud credentials JSON')
     parser.add_argument('--single_instance_only', default='false', type=str,
                         help='When true, allow duplicate launches by skipping instance checks')
+    parser.add_argument('--debug_output', default=True, type=bool,
+                        help='When true, save debug images to debug directory')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
     args.single_instance_only = args.single_instance_only.lower() == 'true'
@@ -144,12 +146,10 @@ if __name__ == "__main__":
             try:
                 config = json.load(f)
             except Exception:
-                config = {}
-
-    # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
+                config = {}    # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
     for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
                 'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'ocr_engine',
-                'gcp_credentials', 'single_instance_only']:
+                'gcp_credentials', 'single_instance_only', 'debug_output']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 
@@ -182,13 +182,13 @@ if __name__ == "__main__":
         os.makedirs(output_dir)
         print(f"Created output directory: {output_dir}")
 
-    # 出力先と監視対象が同じ場合はエラー
+    # 出出力先と監視対象が同じ場合はエラー
     from modules.utils.path_utils import is_subpath
 
-    # 出力先が監視対象パス内に含まれていないかチェック
+    # 出出力先が監視対象パス内に含まれていないかチェック
     if is_subpath(output_dir, path):
         print('警告: 出力ディレクトリが監視対象ディレクトリ内にあります。')
-        print('出力先を監視対象の親ディレクトリに変更します。')
+        print('出出力先を監視対象の親ディレクトリに変更します。')
         output_dir = os.path.join(os.path.dirname(path), 'output')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -230,7 +230,9 @@ if __name__ == "__main__":
         mono_color=args.color,
         enable_udp=use_udp,
         ocr_engine=args.ocr_engine,
-        gcp_credentials=args.gcp_credentials)
+        gcp_credentials=args.gcp_credentials,
+        debug_output=args.debug_output
+    )
 
     # サーバーとの通信を試みる
     response = hello_server(path)

@@ -18,17 +18,15 @@ def detect_text(content):
     image = vision.Image(content=content)
 
     response = client.text_detection(image=image)
-    texts = response.text_annotations
-    print("Texts:")
 
-    for text in texts:
-        print(f'\n"{text.description}"')
-
-        vertices = [
-            f"({vertex.x},{vertex.y})" for vertex in text.bounding_poly.vertices
-        ]
-
-        print("bounds: {}".format(",".join(vertices)))
+    # texts = response.text_annotations
+    # print("Texts:")
+    # for text in texts:
+    # print(f'\n"{text.description}"')
+    # vertices = [
+    #     f"({vertex.x},{vertex.y})" for vertex in text.bounding_poly.vertices
+    # ]
+    # print("bounds: {}".format(",".join(vertices)))
 
     if response.error.message:
         raise Exception(

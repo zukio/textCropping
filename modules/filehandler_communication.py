@@ -20,7 +20,7 @@ class TargetFileHandler(FileSystemEventHandler):
 
     def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir,
                  crop=False, color_mode="original", mono_color="#000000", enable_udp=True,
-                 ocr_engine="tesseract", gcp_credentials=None):
+                 ocr_engine="tesseract", gcp_credentials=None, debug_output=True):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.ip = ip
@@ -35,6 +35,16 @@ class TargetFileHandler(FileSystemEventHandler):
         self.mono_color = mono_color
         self.ocr_engine = ocr_engine
         self.gcp_credentials = gcp_credentials
+        self.debug_output = debug_output        # 設定情報をログに記録
+        logging.info(f"==============")
+        logging.info(f"OCRエンジン: {self.ocr_engine}")
+        logging.info(f"サブディレクトリ除外設定: {self.exclude_subdirectories}")
+        logging.info(f"カラーモード: {self.color_mode}")
+        logging.info(f"デバッグ出力: {self.debug_output}")
+        if self.enable_udp:
+            logging.info(f"UDP通信: 有効 (IP: {self.ip}, ポート: {self.port})")
+        else:
+            logging.info("UDP通信: 無効")
 
         # 処理済みファイルを追跡するためのセット
         self.processed_files = set()
@@ -164,7 +174,8 @@ class TargetFileHandler(FileSystemEventHandler):
                 color_mode=self.color_mode,
                 mono_color=self.mono_color,
                 ocr_engine=self.ocr_engine,
-                gcp_credentials=self.gcp_credentials
+                gcp_credentials=self.gcp_credentials,
+                debug_output=self.debug_output
             ).extract_texts(file_path)
             if output_path:
                 print(f'Text extraction succeeded: {output_path}')
@@ -212,13 +223,13 @@ class TargetFileHandler(FileSystemEventHandler):
                 from modules.utils.path_utils import is_subpath
                 if is_subpath(self.output_dir, start_path):
                     logging.warning(
-                        f"警告: 出力先ディレクトリが監視対象内です: {self.output_dir}")
-                    logging.warning("出力先を監視対象の親ディレクトリに変更します")
+                        f"警告: 出出力先ディレクトリが監視対象内です: {self.output_dir}")
+                    logging.warning("出出力先を監視対象の親ディレクトリに変更します")
                     self.output_dir = os.path.join(
                         os.path.dirname(start_path), 'output')
                     if not os.path.exists(self.output_dir):
                         os.makedirs(self.output_dir, exist_ok=True)
-                    logging.info(f"新しい出力先: {self.output_dir}")
+                    logging.info(f"新しい出出力先: {self.output_dir}")
 
             set_filehandle(self, start_path,
                            self.exclude_subdirectories, target_files)

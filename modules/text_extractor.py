@@ -9,6 +9,10 @@ import json
 
 # ログの設定
 
+# テキスト検出結果専用のカスタムログレベル
+DETECTED_TEXT = 25  # INFOとWARNINGの間のレベル
+logging.addLevelName(DETECTED_TEXT, 'DETECTED_TEXT')
+
 
 def setup_text_logging():
     """文字検出用のログ設定を行います"""
@@ -17,31 +21,61 @@ def setup_text_logging():
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
 
+    # メイン処理用ロガー（通常のログファイルに出力）
     text_logger = logging.getLogger('text_detection')
     text_logger.setLevel(logging.INFO)
 
+    # 検出テキスト専用ロガー（検出テキストのみを記録）
+    detected_text_logger = logging.getLogger('detected_text')
+    detected_text_logger.setLevel(DETECTED_TEXT)
+
     # 日付ごとに新しいログファイルを作成
     today = datetime.datetime.now().strftime('%Y-%m-%d')
-    log_file = os.path.join(log_dir, f'text_detection_{today}.log')
 
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
+    # 通常のログファイル（処理詳細用）
+    process_log_file = os.path.join(log_dir, f'text_process_{today}.log')
+    # テキスト検出結果専用ログファイル
+    text_log_file = os.path.join(log_dir, f'text_detection_{today}.log')
+
+    # 処理詳細用ハンドラ
+    process_handler = logging.FileHandler(process_log_file, encoding='utf-8')
+    process_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s')
+    process_handler.setFormatter(process_formatter)
+    process_handler.setLevel(logging.INFO)
+
+    # 検出テキスト専用ハンドラ
+    text_handler = logging.FileHandler(text_log_file, encoding='utf-8')
+    text_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s')
+    text_handler.setFormatter(text_formatter)
+    text_handler.setLevel(DETECTED_TEXT)
 
     # ハンドラが既に存在する場合は追加しない
     if not text_logger.handlers:
-        text_logger.addHandler(file_handler)
+        text_logger.addHandler(process_handler)
 
-    return text_logger
+    if not detected_text_logger.handlers:
+        detected_text_logger.addHandler(text_handler)
+
+    return text_logger, detected_text_logger
 
 
 # テキスト検出用のロガーを初期化
-text_logger = setup_text_logging()
+text_logger, detected_text_logger = setup_text_logging()
+
+# 検出テキスト専用ログメソッドを追加
+
+
+def log_detected_text(text):
+    """検出されたテキストを専用ログに記録する"""
+    detected_text_logger.log(DETECTED_TEXT, f"検出テキスト: \n{text}")
 
 # 優先順位：
 # 1. 環境変数で TESSERACT_PATH があればそれを使う
 # 2. なければ、PATHから自動検出
 # 3. それも失敗したらエラーを投げる
+
 
 tess_path = os.environ.get("TESSERACT_PATH") or shutil.which("tesseract")
 TESSERACT_AVAILABLE = tess_path is not None
@@ -55,7 +89,7 @@ else:
 
 class TextExtractor:
     def __init__(self, output_dir=None, crop=False, color_mode="original",
-                 mono_color="#000000", ocr_engine=None, gcp_credentials=None):
+                 mono_color="#000000", ocr_engine=None, gcp_credentials=None, debug_output=False):
         """Create extractor with optional output directory and options.
 
         Parameters
@@ -64,6 +98,8 @@ class TextExtractor:
             Specify OCR engine to use.
         gcp_credentials : str, optional
             Path to Google Cloud credentials JSON.
+        debug_output : bool, optional
+            Whether to save debug images to debug directory. Defaults to True.
         """
         self.output_dir = output_dir
         self.crop = crop
@@ -72,6 +108,7 @@ class TextExtractor:
         self.ocr_engine = ocr_engine
         self.easyocr_reader = None
         self.gcp_credentials = gcp_credentials
+        self.debug_output = debug_output
 
         # 引数が指定されていない場合はデフォルトのOCRエンジンを使用
         if self.ocr_engine is None:
@@ -257,10 +294,8 @@ class TextExtractor:
             text_logger.warning(f"出力先ディレクトリが監視対象内です: {out_dir}")
             # 安全な代替として親ディレクトリの'output'フォルダを使用
             out_dir = os.path.join(os.path.dirname(file_dir), 'output')
-            text_logger.info(f"出力先を変更しました: {out_dir}")
-
-        # ディレクトリ作成
-        if not os.path.exists(debug_dir):
+            text_logger.info(f"出力先を変更しました: {out_dir}")        # ディレクトリ作成
+        if self.debug_output and not os.path.exists(debug_dir):
             os.makedirs(debug_dir, exist_ok=True)
         if not os.path.exists(out_dir):
             os.makedirs(out_dir, exist_ok=True)
@@ -300,9 +335,7 @@ class TextExtractor:
                                  if len(b.split(' ')) >= 5)
             else:
                 text_logger.error("Tesseractが利用できません")
-                return None
-
-        # 文字検出結果をログに記録
+                return None        # 文字検出結果をログに記録
         base_name = os.path.basename(file_path)
         if char_count > 0:
             msg = f"ファイル: {base_name} - 文字検出: {char_count}文字"
@@ -310,9 +343,8 @@ class TextExtractor:
             logging.info(msg)
             if detected_text and detected_text.strip():
                 text = detected_text.strip()
-                # 検出されたテキストを改行ごとに分割してログに記録
-                text_logger.info(f"検出テキスト: \n{text}")
-                logging.info(f"検出テキスト: \n{text}")
+                # 検出されたテキストを専用ログに記録
+                log_detected_text(text)
             else:
                 msg = "テキスト認識できませんでした（ボックスのみ検出）"
                 text_logger.info(msg)
@@ -322,6 +354,7 @@ class TextExtractor:
             msg = f"ファイル: {base_name} - 文字検出なし"
             text_logger.info(msg)
             logging.info(msg)
+            return None
             return None
 
         # テキストボックスを作成
@@ -350,25 +383,24 @@ class TextExtractor:
                 new_y2 = min(h, cy + new_height // 2)
 
                 # 拡大したボックスを描画（連結のため）
+                # 連結処理を強化するためのモルフォロジー演算
                 text_mask[new_y1:new_y2, new_x1:new_x2] = 255
-
-        # 連結処理を強化するためのモルフォロジー演算
         kernel = np.ones((5, 5), np.uint8)
         text_mask = cv2.dilate(text_mask, kernel, iterations=1)
         text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_CLOSE, kernel)
 
         # デバッグ用にボックス画像を保存
-        boxes_path = os.path.join(debug_dir, f"{base_name}_boxes.jpg")
-        try:
-            success, buffer = cv2.imencode('.jpg', text_mask)
-            if success:
-                with open(boxes_path, 'wb') as f:
-                    f.write(buffer)
-                text_logger.info(f"ボックス画像を保存しました: {boxes_path}")
-        except Exception as e:
-            text_logger.error(f"ボックス画像の保存中にエラーが発生しました: {e}")
-
-        # ボックス範囲内の画像を抽出
+        if self.debug_output:
+            boxes_path = os.path.join(debug_dir, f"{base_name}_boxes.jpg")
+            try:
+                success, buffer = cv2.imencode('.jpg', text_mask)
+                if success:
+                    with open(boxes_path, 'wb') as f:
+                        f.write(buffer)
+                    text_logger.info(f"ボックス画像を保存しました: {boxes_path}")
+            except Exception as e:
+                # ボックス範囲内の画像を抽出
+                text_logger.error(f"ボックス画像の保存中にエラーが発生しました: {e}")
         masked_original = img.copy()
 
         # 画像の前処理を実行（ボックス内のみ）
@@ -376,30 +408,32 @@ class TextExtractor:
         enhanced_img, binary_img = self.preprocess_image(masked_original)
 
         # 前処理結果の保存（デバッグ用）
-        try:
-            # 前処理画像の保存
-            enhanced_success, enhanced_buffer = cv2.imencode(
-                '.jpg', enhanced_img)
-            if enhanced_success:
-                with open(os.path.join(debug_dir, f"{base_name}_enhanced.jpg"), 'wb') as f:
-                    f.write(enhanced_buffer)
+        if self.debug_output:
+            try:
+                # 前処理画像の保存
+                enhanced_success, enhanced_buffer = cv2.imencode(
+                    '.jpg', enhanced_img)
+                if enhanced_success:
+                    with open(os.path.join(debug_dir, f"{base_name}_enhanced.jpg"), 'wb') as f:
+                        f.write(enhanced_buffer)
 
-            # 二値化画像の保存
-            binary_success, binary_buffer = cv2.imencode('.jpg', binary_img)
-            if binary_success:
-                with open(os.path.join(debug_dir, f"{base_name}_binary.jpg"), 'wb') as f:
-                    f.write(binary_buffer)
+                # 二値化画像の保存
+                binary_success, binary_buffer = cv2.imencode(
+                    '.jpg', binary_img)
+                if binary_success:
+                    with open(os.path.join(debug_dir, f"{base_name}_binary.jpg"), 'wb') as f:
+                        f.write(binary_buffer)
 
-            text_logger.info(f"前処理済み画像をデバッグディレクトリに保存しました: {debug_dir}")
-        except Exception as e:
-            text_logger.error(f"デバッグ画像の保存中にエラーが発生しました: {e}")
-            # 保存に失敗しても処理は続行
+                text_logger.info(f"前処理済み画像をデバッグディレクトリに保存しました: {debug_dir}")
+            except Exception as e:
+                text_logger.error(f"デバッグ画像の保存中にエラーが発生しました: {e}")
+                # 保存に失敗しても処理は続行
 
         # 二値化画像の平均値をチェックして文字領域の白黒を判断
         binary_mean = np.mean(binary_img)
         text_logger.info(f"二値化画像の平均値: {binary_mean}")
 
-        if binary_mean > 170:
+        if binary_mean > 120:
             # 文字が白の場合は反転
             final_mask = cv2.bitwise_not(binary_img)
             text_logger.info("二値化画像の文字は白です（反転して使用）")
@@ -422,15 +456,16 @@ class TextExtractor:
         #    refined_mask, cv2.MORPH_CLOSE, kernel)
 
         # デバッグ用に最終マスクを保存
-        mask_path = os.path.join(debug_dir, f"{base_name}_text_mask.jpg")
-        try:
-            success, buffer = cv2.imencode('.jpg', refined_mask)
-            if success:
-                with open(mask_path, 'wb') as f:
-                    f.write(buffer)
-                text_logger.info(f"最終マスク画像を保存しました: {mask_path}")
-        except Exception as e:
-            text_logger.error(f"マスク画像の保存中にエラーが発生しました: {e}")
+        if self.debug_output:
+            mask_path = os.path.join(debug_dir, f"{base_name}_text_mask.jpg")
+            try:
+                success, buffer = cv2.imencode('.jpg', refined_mask)
+                if success:
+                    with open(mask_path, 'wb') as f:
+                        f.write(buffer)
+                    text_logger.info(f"最終マスク画像を保存しました: {mask_path}")
+            except Exception as e:
+                text_logger.error(f"マスク画像の保存中にエラーが発生しました: {e}")
 
         # 最終出力画像の作成（透過PNG）
         if self.color_mode == "original":

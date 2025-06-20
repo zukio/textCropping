@@ -97,13 +97,13 @@ class TargetFileHandler(FileSystemEventHandler):
                 from modules.utils.path_utils import is_subpath
                 if is_subpath(self.output_dir, start_path):
                     logging.warning(
-                        f"警告: 出力先ディレクトリが監視対象内です: {self.output_dir}")
-                    logging.warning("出力先を監視対象の親ディレクトリに変更します")
+                        f"警告: 出出力先ディレクトリが監視対象内です: {self.output_dir}")
+                    logging.warning("出出力先を監視対象の親ディレクトリに変更します")
                     self.output_dir = os.path.join(
                         os.path.dirname(start_path), 'output')
                     if not os.path.exists(self.output_dir):
                         os.makedirs(self.output_dir, exist_ok=True)
-                    logging.info(f"新しい出力先: {self.output_dir}")
+                    logging.info(f"新しい出出力先: {self.output_dir}")
             set_filehandle(self, start_path,
                            self.exclude_subdirectories, target_files)
         except Exception as e:

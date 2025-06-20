@@ -18,8 +18,8 @@ python main.py ^
 --delay 1 ^
 --target "." ^
 --output_dir "..\output" ^
---color_mode="original" ^
---color="#FF0000" ^
+--color_mode="mono" ^
+--color="#FFFFFF" ^
 --ocr_engine "saas"
 REM --crop オプションは--crop と書くと True になります。指定しない場合は False になります（デフォルト値）。--crop=False という構文はエラーになります。
 
