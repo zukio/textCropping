@@ -19,7 +19,7 @@ class TargetFileHandler(FileSystemEventHandler):
 
     def __init__(self, exclude_subdirectories, seconds, output_dir,
                  crop=False, color_mode="original", mono_color="#000000",
-                 ocr_engine="tesseract"):
+                 ocr_engine="tesseract", gcp_credentials=None):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.seconds = seconds
@@ -28,6 +28,7 @@ class TargetFileHandler(FileSystemEventHandler):
         self.color_mode = color_mode
         self.mono_color = mono_color
         self.ocr_engine = ocr_engine
+        self.gcp_credentials = gcp_credentials
 
     def destroy(self, reason):
         # 終了メッセージをUDPで送信する
@@ -73,7 +74,8 @@ class TargetFileHandler(FileSystemEventHandler):
                 crop=self.crop,
                 color_mode=self.color_mode,
                 mono_color=self.mono_color,
-                ocr_engine=self.ocr_engine
+                ocr_engine=self.ocr_engine,
+                gcp_credentials=self.gcp_credentials
             ).extract_texts(file_path)
             if output_path:
                 print(f'Text extraction succeeded: {output_path}')
