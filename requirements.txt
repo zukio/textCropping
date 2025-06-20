@@ -12,3 +12,4 @@ pytesseract
 pystray==0.19.4
 # 高精度OCR用追加ライブラリ（オプション）
 easyocr
+google-cloud-vision
