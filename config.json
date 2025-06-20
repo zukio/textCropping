@@ -14,5 +14,5 @@
 	"color_mode": "original",
 	"color": "#000000",
 	"single_instance_only": false,
-	"debug_output": true
+	"debug_output": false
 }
