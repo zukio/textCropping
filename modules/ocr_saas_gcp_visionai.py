@@ -4,6 +4,75 @@ import cv2
 from google.cloud import vision    # バージョン: 3.5.0
 
 
+def detect_text(content):
+    """Detects text in the file."""
+    from google.cloud import vision
+
+    client = vision.ImageAnnotatorClient()
+
+    image = vision.Image(content=content)
+
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    print("Texts:")
+
+    for text in texts:
+        print(f'\n"{text.description}"')
+
+        vertices = [
+            f"({vertex.x},{vertex.y})" for vertex in text.bounding_poly.vertices
+        ]
+
+        print("bounds: {}".format(",".join(vertices)))
+
+    if response.error.message:
+        raise Exception(
+            "{}\nFor more info on error messages, check: "
+            "https://cloud.google.com/apis/design/errors".format(
+                response.error.message)
+        )
+
+    return response
+
+
+def detect_text_localpath(path):
+    with open(path, "rb") as image_file:
+        content = image_file.read()
+
+    return detect_text(content)
+
+
+def detect_text_uri(uri):
+    """Detects text in the file located in Google Cloud Storage or on the Web."""
+    from google.cloud import vision
+
+    client = vision.ImageAnnotatorClient()
+    image = vision.Image()
+    image.source.image_uri = uri
+
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    print("Texts:")
+
+    for text in texts:
+        print(f'\n"{text.description}"')
+
+        vertices = [
+            f"({vertex.x},{vertex.y})" for vertex in text.bounding_poly.vertices
+        ]
+
+        print("bounds: {}".format(",".join(vertices)))
+
+    if response.error.message:
+        raise Exception(
+            "{}\nFor more info on error messages, check: "
+            "https://cloud.google.com/apis/design/errors".format(
+                response.error.message)
+        )
+
+    return response
+
+
 def extract_text(img) -> Tuple[str, str, int]:
     """Detect text and bounding boxes using Google Cloud Vision API.
 
@@ -18,23 +87,13 @@ def extract_text(img) -> Tuple[str, str, int]:
         Detected full text, bounding boxes in Tesseract style and
         character count.
     """
-    os.environ.setdefault(
-        "GOOGLE_APPLICATION_CREDENTIALS", "./gcp-signature.json")
-
-    client = vision.ImageAnnotatorClient()
+    # os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS", "./gcp-signature.json")
 
     success, buf = cv2.imencode('.png', img)
     if not success:
         raise RuntimeError("Failed to encode image for Vision API")
 
-    image = vision.Image(content=buf.tobytes())
-
-    response = client.document_text_detection(image=image)
-
-    if response.error.message:
-        raise Exception(
-            f"{response.error.message}\nFor more info on error messages, check: "
-            "https://cloud.google.com/apis/design/errors")
+    response = detect_text(buf.tobytes())
 
     annotation = response.full_text_annotation
     result_text = annotation.text if annotation.text else ""

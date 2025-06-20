@@ -20,7 +20,7 @@ python main.py ^
 --output_dir "..\output" ^
 --color_mode="original" ^
 --color="#FF0000" ^
---ocr_engine "easyocr"
+--ocr_engine "saas"
 REM --crop オプションは--crop と書くと True になります。指定しない場合は False になります（デフォルト値）。--crop=False という構文はエラーになります。
 
 REM エラーコードを返す
