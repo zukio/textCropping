@@ -163,3 +163,4 @@ logs/
 _old/
 sample/
 *config.json
+ocr-visionai-*.json

@@ -1,6 +1,6 @@
 {
-        "exclude_subdirectories": false,
-        "ignore_subfolders": false,
+	"exclude_subdirectories": false,
+	"ignore_subfolders": false,
 	"target": "",
 	"seconds": 1,
 	"ip": "localhost",
@@ -8,11 +8,11 @@
 	"delay": 1,
 	"output_dir": "",
 	"no_console": false,
-        "use_udp": true,
-        "ocr_engine": "tesseract",
-        "gcp_credentials": "",
-        "crop": false,
-        "color_mode": "original",
-        "color": "#000000"
-        , "single_instance_only": false
+	"use_udp": true,
+	"ocr_engine": "tesseract",
+	"gcp_credentials": "ocr-visionai-e134400bd44b.json",
+	"crop": false,
+	"color_mode": "original",
+	"color": "#000000",
+	"single_instance_only": false
 }
