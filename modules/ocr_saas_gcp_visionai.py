@@ -2,13 +2,18 @@ import os
 from typing import Tuple
 import cv2
 from google.cloud import vision    # バージョン: 3.5.0
+from google.auth.exceptions import DefaultCredentialsError
 
 
 def detect_text(content):
     """Detects text in the file."""
     from google.cloud import vision
-
-    client = vision.ImageAnnotatorClient()
+    try:
+        client = vision.ImageAnnotatorClient()
+    except DefaultCredentialsError as e:
+        raise RuntimeError(
+            "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or specify 'gcp_credentials' in config.json"
+        ) from e
 
     image = vision.Image(content=content)
 

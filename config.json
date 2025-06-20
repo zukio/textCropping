@@ -10,6 +10,7 @@
 	"no_console": false,
         "use_udp": true,
         "ocr_engine": "tesseract",
+        "gcp_credentials": "",
         "crop": false,
         "color_mode": "original",
         "color": "#000000"
