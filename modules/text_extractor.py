@@ -206,9 +206,14 @@ class TextExtractor:
             return None, None, 0
 
     def extract_texts_with_saas(self, img):
-        """SaaS型OCRを使用してテキストを抽出 (未実装)"""
-        text_logger.warning("SaaS OCR は未実装です")
-        return None, None, 0
+        """Use Google Cloud Vision API to extract texts."""
+        try:
+            from modules.ocr_saas_gcp_visionai import extract_text
+            detected_text, boxes, char_count = extract_text(img)
+            return detected_text, boxes, char_count
+        except Exception as e:
+            text_logger.error(f"SaaS OCR error: {e}")
+            return None, None, 0
 
     def extract_texts(self, file_path):
         # 日本語ファイル名対応のため、NumPyを使用して画像を読み込む

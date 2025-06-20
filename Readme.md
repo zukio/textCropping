@@ -137,7 +137,7 @@ text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポー�
 
 * `pytesseract` (デフォルト): 基本的なOCR機能
 * `EasyOCR`: 高精度な多言語OCR (オプション)
-* `google`: Google Cloud Vision APIを使用 (オプション)
+* `saas`: Google Cloud Vision API を使用 (オプション)
 
 `config.json` または `--ocr_engine` オプションで OCR エンジンを設定できます:
 
