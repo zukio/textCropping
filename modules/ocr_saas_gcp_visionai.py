@@ -89,7 +89,7 @@ def extract_text(img) -> Tuple[str, str, int]:
     Returns
     -------
     Tuple[str, str, int]
-        Detected full text, bounding boxes in Tesseract style and
+        Detected fuconfigll text, bounding boxes in Tesseract style and
         character count.
     """
     # os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS", "./gcp-signature.json")
