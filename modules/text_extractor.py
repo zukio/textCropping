@@ -325,7 +325,7 @@ class TextExtractor:
         # テキストボックスを作成
         text_mask = np.zeros((h, w), dtype=np.uint8)
 
-        # 各文字ボックスを2倍に拡大して連結
+        # 各文字ボックスを拡大して連結
         text_logger.info("文字ボックスを拡大して連結します")
         for b in boxes.splitlines():
             parts = b.split(' ')
@@ -334,13 +334,13 @@ class TextExtractor:
                 # Tesseract の座標系は左下が原点なので変換
                 y1, y2 = h - y2, h - y1
 
-                # ボックスを2倍に拡大（中心から）
+                # ボックスを指定倍率で拡大（中心から）
                 width = x2 - x1
                 height = y2 - y1
                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
-                new_width = width * 2
-                new_height = height * 2
+                new_width = int(round(width * self.box_scale))
+                new_height = int(round(height * self.box_scale))
 
                 new_x1 = max(0, cx - new_width // 2)
                 new_y1 = max(0, cy - new_height // 2)
@@ -411,11 +411,9 @@ class TextExtractor:
         refined_mask = cv2.bitwise_and(final_mask, text_mask)
 
         # マスクの微調整（小さなノイズを除去、文字の連結を強化）
-        kernel = np.ones((2, 2), np.uint8)
+        kernel = np.ones((self.morph_kernel_size, self.morph_kernel_size), np.uint8)
         refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_OPEN, kernel)
-        kernel_close = np.ones((3, 3), np.uint8)
-        refined_mask = cv2.morphologyEx(
-            refined_mask, cv2.MORPH_CLOSE, kernel_close)
+        refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel)
 
         # デバッグ用に最終マスクを保存
         mask_path = os.path.join(debug_dir, f"{base_name}_text_mask.jpg")
