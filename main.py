@@ -129,6 +129,8 @@ if __name__ == "__main__":
                         help='Color mode for output images')
     parser.add_argument('--color', default='#000000', type=str,
                         help='Mono color when color_mode is mono. Hex or R,G,B')
+    parser.add_argument('--ocr_engine', default='', type=str,
+                        help='OCR engine to use (tesseract, easyocr, saas)')
     parser.add_argument('--single_instance_only', default='false', type=str,
                         help='When true, allow duplicate launches by skipping instance checks')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
@@ -144,12 +146,15 @@ if __name__ == "__main__":
 
     # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
     for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
-                'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'single_instance_only']:
+                'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'ocr_engine', 'single_instance_only']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 
     if isinstance(args.single_instance_only, str):
         args.single_instance_only = args.single_instance_only.lower() == 'true'
+
+    if args.ocr_engine == '':
+        args.ocr_engine = None
 
     # ignore_subfolders is treated as an alias of exclude_subdirectories
     if args.ignore_subfolders:
@@ -218,7 +223,8 @@ if __name__ == "__main__":
         crop=args.crop,
         color_mode=args.color_mode,
         mono_color=args.color,
-        enable_udp=use_udp)
+        enable_udp=use_udp,
+        ocr_engine=args.ocr_engine)
 
     # サーバーとの通信を試みる
     response = hello_server(path)

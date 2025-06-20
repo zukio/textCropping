@@ -54,38 +54,34 @@ else:
 
 
 class TextExtractor:
-    def __init__(self, output_dir=None, crop=False, color_mode="original", mono_color="#000000",
-                 box_scale=1.2, morph_kernel_size=2):
+    def __init__(self, output_dir=None, crop=False, color_mode="original", mono_color="#000000", ocr_engine=None):
         """Create extractor with optional output directory and options.
 
-        Args:
-            output_dir: 出力先ディレクトリ
-            crop: 文字部分だけを切り抜くかどうか
-            color_mode: 出力画像のカラー設定
-            mono_color: 単色モードの場合の色
-            box_scale: 文字ボックス拡大倍率（中心から拡大）
-            morph_kernel_size: マスク調整に用いるモルフォロジー演算のカーネルサイズ
+        Parameters
+        ----------
+        ocr_engine : str, optional
+            Specify OCR engine to use. Overrides config.json if provided.
         """
         self.output_dir = output_dir
         self.crop = crop
         self.color_mode = color_mode
         self.mono_color = mono_color
-        self.box_scale = box_scale
-        self.morph_kernel_size = morph_kernel_size
-        self.ocr_engine = "tesseract"
+        self.ocr_engine = ocr_engine
         self.easyocr_reader = None
 
         # 設定ファイルからOCRエンジンを読み込む
         config_path = os.path.join(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))), 'config.json')
-        if os.path.exists(config_path):
+        if self.ocr_engine is None and os.path.exists(config_path):
             try:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                    self.ocr_engine = config.get('ocr_engine', "tesseract")
+                    self.ocr_engine = config.get('ocr_engine')
             except Exception as e:
                 text_logger.warning(f"設定ファイルの読み込みに失敗しました: {e}")
-                self.ocr_engine = "tesseract"
+
+        if self.ocr_engine is None:
+            self.ocr_engine = "tesseract"
 
         # Tesseractが使えない場合はEasyOCRへフォールバック
         if not TESSERACT_AVAILABLE and self.ocr_engine == "tesseract":
