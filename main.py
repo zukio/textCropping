@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument('--color', default='#000000', type=str,
                         help='Mono color when color_mode is mono. Hex or R,G,B')
     parser.add_argument('--ocr_engine', default='', type=str,
-                        help='OCR engine to use (tesseract, easyocr, saas)')
+                        help='OCR engine to use (tesseract, easyocr, saas, none)')
     parser.add_argument('--gcp_credentials', default='', type=str,
                         help='Path to Google Cloud credentials JSON')
     parser.add_argument('--single_instance_only', default='false', type=str,

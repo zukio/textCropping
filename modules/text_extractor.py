@@ -110,6 +110,10 @@ class TextExtractor:
         self.gcp_credentials = gcp_credentials
         self.debug_output = debug_output
 
+        # OCRエンジンの正規化
+        if isinstance(self.ocr_engine, str):
+            self.ocr_engine = self.ocr_engine.lower()
+
         # 引数が指定されていない場合はデフォルトのOCRエンジンを使用
         if self.ocr_engine is None:
             self.ocr_engine = "tesseract"
@@ -306,7 +310,10 @@ class TextExtractor:
         text_logger.info(f"ファイル: {os.path.basename(file_path)} のテキスト検出を開始します")
 
         # 設定に基づいてOCRエンジンを選択
-        if self.ocr_engine == "easyocr":
+        if str(self.ocr_engine).lower() == "none":
+            text_logger.info("OCR処理をスキップします")
+            detected_text, boxes, char_count = "", "", 0
+        elif self.ocr_engine == "easyocr":
             detected_text, boxes, char_count = self.extract_texts_with_easyocr(
                 img)
             if detected_text is None or boxes is None:
@@ -337,7 +344,11 @@ class TextExtractor:
                 text_logger.error("Tesseractが利用できません")
                 return None        # 文字検出結果をログに記録
         base_name = os.path.basename(file_path)
-        if char_count > 0:
+        if str(self.ocr_engine).lower() == "none":
+            msg = f"ファイル: {base_name} - OCRスキップモード"
+            text_logger.info(msg)
+            logging.info(msg)
+        elif char_count > 0:
             msg = f"ファイル: {base_name} - 文字検出: {char_count}文字"
             text_logger.info(msg)
             logging.info(msg)
@@ -358,36 +369,40 @@ class TextExtractor:
             return None
 
         # テキストボックスを作成
-        text_mask = np.zeros((h, w), dtype=np.uint8)
+        if str(self.ocr_engine).lower() == "none":
+            # OCRスキップ時は画像全体をマスク対象とする
+            text_mask = np.ones((h, w), dtype=np.uint8) * 255
+        else:
+            text_mask = np.zeros((h, w), dtype=np.uint8)
 
-        # 各文字ボックスを拡大して連結
-        text_logger.info("文字ボックスを拡大して連結します")
-        for b in boxes.splitlines():
-            parts = b.split(' ')
-            if len(parts) >= 5:
-                x1, y1, x2, y2 = map(int, parts[1:5])
-                # Tesseract の座標系は左下が原点なので変換
-                y1, y2 = h - y2, h - y1
+            # 各文字ボックスを拡大して連結
+            text_logger.info("文字ボックスを拡大して連結します")
+            for b in boxes.splitlines():
+                parts = b.split(' ')
+                if len(parts) >= 5:
+                    x1, y1, x2, y2 = map(int, parts[1:5])
+                    # Tesseract の座標系は左下が原点なので変換
+                    y1, y2 = h - y2, h - y1
 
-                # ボックスを指定倍率で拡大（中心から）
-                width = x2 - x1
-                height = y2 - y1
-                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                box_scale = 1.2  # ボックス拡大率
-                new_width = int(round(width * box_scale))
-                new_height = int(round(height * box_scale))
+                    # ボックスを指定倍率で拡大（中心から）
+                    width = x2 - x1
+                    height = y2 - y1
+                    cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                    box_scale = 1.2  # ボックス拡大率
+                    new_width = int(round(width * box_scale))
+                    new_height = int(round(height * box_scale))
 
-                new_x1 = max(0, cx - new_width // 2)
-                new_y1 = max(0, cy - new_height // 2)
-                new_x2 = min(w, cx + new_width // 2)
-                new_y2 = min(h, cy + new_height // 2)
+                    new_x1 = max(0, cx - new_width // 2)
+                    new_y1 = max(0, cy - new_height // 2)
+                    new_x2 = min(w, cx + new_width // 2)
+                    new_y2 = min(h, cy + new_height // 2)
 
-                # 拡大したボックスを描画（連結のため）
-                # 連結処理を強化するためのモルフォロジー演算
-                text_mask[new_y1:new_y2, new_x1:new_x2] = 255
-        kernel = np.ones((5, 5), np.uint8)
-        text_mask = cv2.dilate(text_mask, kernel, iterations=1)
-        text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_CLOSE, kernel)
+                    # 拡大したボックスを描画（連結のため）
+                    # 連結処理を強化するためのモルフォロジー演算
+                    text_mask[new_y1:new_y2, new_x1:new_x2] = 255
+            kernel = np.ones((5, 5), np.uint8)
+            text_mask = cv2.dilate(text_mask, kernel, iterations=1)
+            text_mask = cv2.morphologyEx(text_mask, cv2.MORPH_CLOSE, kernel)
 
         # デバッグ用にボックス画像を保存
         if self.debug_output:
