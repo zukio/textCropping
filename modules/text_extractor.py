@@ -366,7 +366,6 @@ class TextExtractor:
             text_logger.info(msg)
             logging.info(msg)
             return None
-            return None
 
         # テキストボックスを作成
         if str(self.ocr_engine).lower() == "none":
