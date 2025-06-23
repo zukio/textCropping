@@ -131,16 +131,19 @@ class TextExtractor:
     def _save_svg(self, mask, svg_path):
         """Save mask as SVG using potrace."""
         try:
-            potrace_path = os.environ.get("POTRACE_PATH") or shutil.which("potrace")
+            potrace_path = os.environ.get(
+                "POTRACE_PATH") or shutil.which("potrace")
             if not potrace_path:
-                text_logger.error("potraceが見つかりません。'POTRACE_PATH'を設定するか、PATHに追加してください")
+                text_logger.error(
+                    "potraceが見つかりません。'POTRACE_PATH'を設定するか、PATHに追加してください")
                 return
             temp_path = None
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
                 Image.fromarray(mask).convert("1").save(tmp.name)
                 temp_path = tmp.name
 
-            subprocess.run([potrace_path, temp_path, "-s", "-o", svg_path], check=True)
+            subprocess.run([potrace_path, temp_path, "-s",
+                           "-o", svg_path], check=True)
             text_logger.info(f"SVGを保存しました: {svg_path}")
         except Exception as e:
             text_logger.error(f"SVG保存中にエラーが発生しました: {e}")
