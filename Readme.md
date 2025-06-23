@@ -41,7 +41,7 @@
 
     最新の安定版を選択し、インストーラーをダウンロード後、インストーラーを実行し、Tesseractをインストールします。インストール後、Tesseractの実行ファイルがシステムのパスに追加されていることを確認してください。
 
-    注：Tesseractのインストール先は、デフォルトでは `C:\Program Files\Tesseract-OCR` です。インストール後、PATH環境変数に追加する必要があります。
+    注：Tesseractのインストール先は、デフォルトでは `C:\Program Files\Tesseract-OCR` です。インストール後、`PATH` 環境変数に追加するか、環境変数 `TESSERACT_PATH` にフルパスを設定してください。
 
 ## Usage
 
@@ -168,9 +168,11 @@ text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポー�
    pip install -r requirements.txt
    ```
 
-4. [Tesseract Windows Installer](https://github.com/UB-Mannheim/tesseract/wiki) をインストールします。Tesseract はシステムパスに追加されているか、またはその実行ファイルが直接このスクリプトと同じディレクトリに存在することが前提となっています。
+4. [Tesseract Windows Installer](https://github.com/UB-Mannheim/tesseract/wiki) をインストールします。Tesseract の実行ファイルが `PATH` に含まれていない場合は、環境変数 `TESSERACT_PATH` にフルパスを設定してください。
 
-5. main.py スクリプトを使用して、ディレクトリの監視とサムネイル生成を開始します。
+5. [potrace](http://potrace.sourceforge.net/) をインストールし、実行ファイルへのパスを環境変数 `POTRACE_PATH` または `PATH` に追加します。SVG 出力機能を利用する場合に必須です。
+
+6. main.py スクリプトを使用して、ディレクトリの監視とサムネイル生成を開始します。
 
    ```shell
    python main.py --exclude_subdirectories --target <監視対象ディレクトリ> --seconds 2 --ip <IPアドレス> --port <ポート番号> --delay 3
