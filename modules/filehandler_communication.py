@@ -20,7 +20,7 @@ class TargetFileHandler(FileSystemEventHandler):
 
     def __init__(self, exclude_subdirectories, sender, ip, port, seconds, output_dir,
                  crop=False, color_mode="original", mono_color="#000000", enable_udp=True,
-                 ocr_engine="tesseract", gcp_credentials=None, debug_output=True):
+                 ocr_engine="tesseract", gcp_credentials=None, debug_output=True, enable_svg=True):
         super().__init__()
         self.exclude_subdirectories = exclude_subdirectories
         self.ip = ip
@@ -30,6 +30,7 @@ class TargetFileHandler(FileSystemEventHandler):
         self.seconds = seconds
         self.output_dir = output_dir
         self.enable_udp = enable_udp
+        self.enable_svg = enable_svg
         self.crop = crop
         self.color_mode = color_mode
         self.mono_color = mono_color
@@ -175,7 +176,8 @@ class TargetFileHandler(FileSystemEventHandler):
                 mono_color=self.mono_color,
                 ocr_engine=self.ocr_engine,
                 gcp_credentials=self.gcp_credentials,
-                debug_output=self.debug_output
+                debug_output=self.debug_output,
+                enable_svg=self.enable_svg
             ).extract_texts(file_path)
             if output_path:
                 print(f'Text extraction succeeded: {output_path}')

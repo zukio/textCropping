@@ -8,7 +8,10 @@ import json
 from aioconsole import ainput
 from watchdog.observers import Observer
 from PIL import Image, ImageDraw
-import pystray
+try:
+    import pystray
+except Exception:  # noqa: W0703
+    pystray = None
 from modules.communication.udp_client import DelayedUDPSender, hello_server
 from modules.filehandler_communication import TargetFileHandler
 from modules.communication.ipc_client import check_existing_instance
@@ -32,6 +35,8 @@ def _create_image():
 
 def setup_tray(exit_callback, settings):
     """Start system tray icon with settings submenu."""
+    if pystray is None:
+        return None
     icon = pystray.Icon('textCropping', _create_image(), 'textCropping')
 
     settings_menu = pystray.Menu(
@@ -123,6 +128,8 @@ if __name__ == "__main__":
                         help='Run in background mode without console input')
     parser.add_argument('--disable_udp', action='store_true',
                         help='Disable UDP notifications')
+    parser.add_argument('--disable_svg', action='store_true',
+                        help='Disable outline SVG output')
     parser.add_argument('--crop', action='store_true',
                         help='Crop image to text area')
     parser.add_argument('--color_mode', default='original', choices=['original', 'mono'],
@@ -169,6 +176,11 @@ if __name__ == "__main__":
         use_udp = config.get('use_udp', True)
     else:
         use_udp = not args.disable_udp
+
+    if args.disable_svg == parser.get_default('disable_svg'):
+        enable_svg = config.get('enable_svg', True)
+    else:
+        enable_svg = not args.disable_svg
     path = os.path.abspath(
         args.target) if args.target else os.path.abspath(os.getcwd())
     if args.output_dir:
@@ -229,6 +241,7 @@ if __name__ == "__main__":
         color_mode=args.color_mode,
         mono_color=args.color,
         enable_udp=use_udp,
+        enable_svg=enable_svg,
         ocr_engine=args.ocr_engine,
         gcp_credentials=args.gcp_credentials,
         debug_output=args.debug_output
