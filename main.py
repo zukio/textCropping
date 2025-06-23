@@ -156,7 +156,7 @@ if __name__ == "__main__":
                 config = {}    # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
     for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
                 'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'ocr_engine',
-                'gcp_credentials', 'single_instance_only', 'debug_output', 'enable_svg']:
+                'gcp_credentials', 'single_instance_only', 'debug_output', 'disable_svg']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 

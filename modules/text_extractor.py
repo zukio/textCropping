@@ -133,7 +133,8 @@ class TextExtractor:
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
                 Image.fromarray(mask).convert("1").save(tmp.name)
-            subprocess.run(["potrace", tmp.name, "-s", "-o", svg_path], check=True)
+            subprocess.run(["potrace", tmp.name, "-s",
+                           "-o", svg_path], check=True)
             text_logger.info(f"SVGを保存しました: {svg_path}")
         except Exception as e:
             text_logger.error(f"SVG保存中にエラーが発生しました: {e}")
@@ -167,7 +168,7 @@ class TextExtractor:
             try:
                 import easyocr
                 text_logger.info("EasyOCRを初期化しています...")
-                self.easyocr_reader = easyocr.Reader(['ja', 'en'])
+                self.easyocr_reader = easyocr.Reader(['ja', 'en'], gpu=False)
                 text_logger.info("EasyOCRの初期化が完了しました")
                 return True
             except ImportError:
