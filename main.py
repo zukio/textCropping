@@ -123,6 +123,8 @@ if __name__ == "__main__":
                         help='Run in background mode without console input')
     parser.add_argument('--disable_udp', action='store_true',
                         help='Disable UDP notifications')
+    parser.add_argument('--disable_svg', action='store_true',
+                        help='Disable outline SVG output')
     parser.add_argument('--crop', action='store_true',
                         help='Crop image to text area')
     parser.add_argument('--color_mode', default='original', choices=['original', 'mono'],
@@ -149,7 +151,7 @@ if __name__ == "__main__":
                 config = {}    # 設定ファイルの値で上書きし、さらに起動引数があればそちらを優先
     for key in ['exclude_subdirectories', 'ignore_subfolders', 'target', 'seconds', 'ip', 'port', 'delay',
                 'output_dir', 'no_console', 'crop', 'color_mode', 'color', 'ocr_engine',
-                'gcp_credentials', 'single_instance_only', 'debug_output']:
+                'gcp_credentials', 'single_instance_only', 'debug_output', 'enable_svg']:
         if getattr(args, key) == parser.get_default(key) and key in config:
             setattr(args, key, config[key])
 
@@ -169,6 +171,11 @@ if __name__ == "__main__":
         use_udp = config.get('use_udp', True)
     else:
         use_udp = not args.disable_udp
+
+    if args.disable_svg == parser.get_default('disable_svg'):
+        enable_svg = config.get('enable_svg', True)
+    else:
+        enable_svg = not args.disable_svg
     path = os.path.abspath(
         args.target) if args.target else os.path.abspath(os.getcwd())
     if args.output_dir:
@@ -229,6 +236,7 @@ if __name__ == "__main__":
         color_mode=args.color_mode,
         mono_color=args.color,
         enable_udp=use_udp,
+        enable_svg=enable_svg,
         ocr_engine=args.ocr_engine,
         gcp_credentials=args.gcp_credentials,
         debug_output=args.debug_output
