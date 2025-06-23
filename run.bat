@@ -8,7 +8,7 @@ CD /D "%~dp0"
 REM https://github.com/UB-Mannheim/tesseract/wiki からtesseractのインストールしてパスを設定
 set "TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-set "PORTRACE_PATH=C:\Users\A-SUZUKI\potrace\potrace.exe"
+set "POTRACE_PATH=C:\Users\A-SUZUKI\potrace\potrace.exe"
 
 REM 仮想環境の activate
 call .venv\Scripts\activate.bat
