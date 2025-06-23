@@ -74,13 +74,37 @@ def log_detected_text(text):
     """検出されたテキストを専用ログに記録する"""
     detected_text_logger.log(DETECTED_TEXT, f"検出テキスト: \n{text}")
 
+
+def _resolve_executable(env_var, command, extra_paths=None):
+    """Resolve executable path from env var, system PATH or common locations."""
+    path = os.environ.get(env_var)
+    if path:
+        path = path.strip('"')  # handle quoted paths
+        if os.path.isfile(path):
+            return path
+    found = shutil.which(command)
+    if found:
+        return found
+    if extra_paths:
+        for p in extra_paths:
+            if os.path.isfile(p):
+                return p
+    return None
+
 # 優先順位：
 # 1. 環境変数で TESSERACT_PATH があればそれを使う
 # 2. なければ、PATHから自動検出
 # 3. それも失敗したらエラーを投げる
 
 
-tess_path = os.environ.get("TESSERACT_PATH") or shutil.which("tesseract")
+tess_path = _resolve_executable(
+    "TESSERACT_PATH",
+    "tesseract",
+    [
+        r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+        r"C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe",
+    ],
+)
 TESSERACT_AVAILABLE = tess_path is not None
 
 if TESSERACT_AVAILABLE:
@@ -130,20 +154,21 @@ class TextExtractor:
 
     def _save_svg(self, mask, svg_path):
         """Save mask as SVG using potrace."""
+        temp_path = None
         try:
-            potrace_path = os.environ.get(
-                "POTRACE_PATH") or shutil.which("potrace")
+
+            potrace_path = _resolve_executable("POTRACE_PATH", "potrace")
+
             if not potrace_path:
                 text_logger.error(
                     "potraceが見つかりません。'POTRACE_PATH'を設定するか、PATHに追加してください")
                 return
-            temp_path = None
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
                 Image.fromarray(mask).convert("1").save(tmp.name)
                 temp_path = tmp.name
 
-            subprocess.run([potrace_path, temp_path, "-s",
-                           "-o", svg_path], check=True)
+            subprocess.run([potrace_path, temp_path, "-s", "-o", svg_path], check=True)
             text_logger.info(f"SVGを保存しました: {svg_path}")
         except Exception as e:
             text_logger.error(f"SVG保存中にエラーが発生しました: {e}")
