@@ -156,11 +156,14 @@ class TextExtractor:
         """Save mask as SVG using potrace."""
         temp_path = None
         try:
+
             potrace_path = _resolve_executable("POTRACE_PATH", "potrace")
+
             if not potrace_path:
                 text_logger.error(
                     "potraceが見つかりません。'POTRACE_PATH'を設定するか、PATHに追加してください")
                 return
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
                 Image.fromarray(mask).convert("1").save(tmp.name)
                 temp_path = tmp.name
