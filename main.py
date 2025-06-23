@@ -8,7 +8,10 @@ import json
 from aioconsole import ainput
 from watchdog.observers import Observer
 from PIL import Image, ImageDraw
-import pystray
+try:
+    import pystray
+except Exception:  # noqa: W0703
+    pystray = None
 from modules.communication.udp_client import DelayedUDPSender, hello_server
 from modules.filehandler_communication import TargetFileHandler
 from modules.communication.ipc_client import check_existing_instance
@@ -32,6 +35,8 @@ def _create_image():
 
 def setup_tray(exit_callback, settings):
     """Start system tray icon with settings submenu."""
+    if pystray is None:
+        return None
     icon = pystray.Icon('textCropping', _create_image(), 'textCropping')
 
     settings_menu = pystray.Menu(
