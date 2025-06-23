@@ -6,6 +6,9 @@ import numpy as np
 import datetime
 import logging
 import json
+import subprocess
+import tempfile
+from PIL import Image
 
 # ログの設定
 
@@ -89,7 +92,8 @@ else:
 
 class TextExtractor:
     def __init__(self, output_dir=None, crop=False, color_mode="original",
-                 mono_color="#000000", ocr_engine=None, gcp_credentials=None, debug_output=False):
+                 mono_color="#000000", ocr_engine=None, gcp_credentials=None, debug_output=False,
+                 enable_svg=True):
         """Create extractor with optional output directory and options.
 
         Parameters
@@ -109,6 +113,7 @@ class TextExtractor:
         self.easyocr_reader = None
         self.gcp_credentials = gcp_credentials
         self.debug_output = debug_output
+        self.enable_svg = enable_svg
 
         # OCRエンジンの正規化
         if isinstance(self.ocr_engine, str):
@@ -122,6 +127,21 @@ class TextExtractor:
         if not TESSERACT_AVAILABLE and self.ocr_engine == "tesseract":
             self.ocr_engine = "easyocr"
             text_logger.info("Tesseractが利用できないためEasyOCRを使用します")
+
+    def _save_svg(self, mask, svg_path):
+        """Save mask as SVG using potrace."""
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
+                Image.fromarray(mask).convert("1").save(tmp.name)
+            subprocess.run(["potrace", tmp.name, "-s", "-o", svg_path], check=True)
+            text_logger.info(f"SVGを保存しました: {svg_path}")
+        except Exception as e:
+            text_logger.error(f"SVG保存中にエラーが発生しました: {e}")
+        finally:
+            try:
+                os.remove(tmp.name)
+            except Exception:
+                pass
 
     def _parse_color(self, color):
         """Convert color specification to BGR tuple."""
@@ -513,12 +533,15 @@ class TextExtractor:
 
         # 最終的な出力画像を保存
         out_path = os.path.join(out_dir, f"{base_name}_texts.png")
+        svg_path = os.path.join(out_dir, f"{base_name}_outline.svg")
         try:
             success, buffer = cv2.imencode('.png', rgba)
             if success:
                 with open(out_path, 'wb') as f:
                     f.write(buffer)
                 text_logger.info(f"文字抽出画像を保存しました: {out_path}")
+                if self.enable_svg:
+                    self._save_svg(refined_mask, svg_path)
                 return out_path
             else:
                 text_logger.error(f"文字抽出画像の保存に失敗しました: {out_path}")
