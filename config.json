@@ -11,8 +11,9 @@
 	"ocr_engine": "tesseract",
 	"gcp_credentials": "ocr-visionai-e134400bd44b.json",
 	"crop": false,
-	"color_mode": "original",
-	"color": "#000000",
-	"single_instance_only": false,
-	"debug_output": false
+        "color_mode": "original",
+        "color": "#000000",
+        "single_instance_only": false,
+        "debug_output": false,
+        "enable_svg": true
 }
