@@ -8,7 +8,7 @@ import logging
 import json
 import subprocess
 import tempfile
-from PIL import Image
+from PIL import Image, ImageOps
 
 # ログの設定
 
@@ -139,7 +139,10 @@ class TextExtractor:
                 return
             temp_path = None
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pbm") as tmp:
-                Image.fromarray(mask).convert("1").save(tmp.name)
+                # potrace expects black foreground on white background
+                pil_mask = Image.fromarray(mask)
+                pil_mask = ImageOps.invert(pil_mask.convert("L"))
+                pil_mask.convert("1").save(tmp.name)
                 temp_path = tmp.name
 
             subprocess.run([potrace_path, temp_path, "-s",
