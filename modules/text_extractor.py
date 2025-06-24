@@ -5,6 +5,7 @@ import pytesseract
 import numpy as np
 import datetime
 import logging
+from modules.utils import logwriter  # noqa: F401
 import json
 import subprocess
 import tempfile
@@ -35,17 +36,8 @@ def setup_text_logging():
     # 日付ごとに新しいログファイルを作成
     today = datetime.datetime.now().strftime('%Y-%m-%d')
 
-    # 通常のログファイル（処理詳細用）
-    process_log_file = os.path.join(log_dir, f'text_process_{today}.log')
     # テキスト検出結果専用ログファイル
     text_log_file = os.path.join(log_dir, f'text_detection_{today}.log')
-
-    # 処理詳細用ハンドラ
-    process_handler = logging.FileHandler(process_log_file, encoding='utf-8')
-    process_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s')
-    process_handler.setFormatter(process_formatter)
-    process_handler.setLevel(logging.INFO)
 
     # 検出テキスト専用ハンドラ
     text_handler = logging.FileHandler(text_log_file, encoding='utf-8')
@@ -54,9 +46,9 @@ def setup_text_logging():
     text_handler.setFormatter(text_formatter)
     text_handler.setLevel(DETECTED_TEXT)
 
-    # ハンドラが既に存在する場合は追加しない
-    if not text_logger.handlers:
-        text_logger.addHandler(process_handler)
+    # text_logger はルートロガーへ伝搬させ、
+    # logwriter.py で設定されたログに統合する
+    text_logger.propagate = True
 
     if not detected_text_logger.handlers:
         detected_text_logger.addHandler(text_handler)
