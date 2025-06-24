@@ -330,10 +330,11 @@ class TextExtractor:
         if not os.path.exists(out_dir):
             os.makedirs(out_dir, exist_ok=True)
 
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        base_name_no_ext = os.path.splitext(os.path.basename(file_path))[0]
+        file_name = os.path.basename(file_path)
 
         # テキスト検出
-        text_logger.info(f"ファイル: {os.path.basename(file_path)} のテキスト検出を開始します")
+        text_logger.info(f"ファイル: {file_name} のテキスト検出を開始します")
 
         # 設定に基づいてOCRエンジンを選択
         if str(self.ocr_engine).lower() == "none":
@@ -369,13 +370,12 @@ class TextExtractor:
             else:
                 text_logger.error("Tesseractが利用できません")
                 return None        # 文字検出結果をログに記録
-        base_name = os.path.basename(file_path)
         if str(self.ocr_engine).lower() == "none":
-            msg = f"ファイル: {base_name} - OCRスキップモード"
+            msg = f"ファイル: {file_name} - OCRスキップモード"
             text_logger.info(msg)
             logging.info(msg)
         elif char_count > 0:
-            msg = f"ファイル: {base_name} - 文字検出: {char_count}文字"
+            msg = f"ファイル: {file_name} - 文字検出: {char_count}文字"
             text_logger.info(msg)
             logging.info(msg)
             if detected_text and detected_text.strip():
@@ -388,7 +388,7 @@ class TextExtractor:
                 logging.info(msg)
                 return None
         else:
-            msg = f"ファイル: {base_name} - 文字検出なし"
+            msg = f"ファイル: {file_name} - 文字検出なし"
             text_logger.info(msg)
             logging.info(msg)
             return None
@@ -431,7 +431,7 @@ class TextExtractor:
 
         # デバッグ用にボックス画像を保存
         if self.debug_output:
-            boxes_path = os.path.join(debug_dir, f"{base_name}_boxes.jpg")
+            boxes_path = os.path.join(debug_dir, f"{base_name_no_ext}_boxes.jpg")
             try:
                 success, buffer = cv2.imencode('.jpg', text_mask)
                 if success:
@@ -444,7 +444,7 @@ class TextExtractor:
         masked_original = img.copy()
 
         # 画像の前処理を実行（ボックス内のみ）
-        text_logger.info(f"ファイル: {os.path.basename(file_path)} の前処理を開始します")
+        text_logger.info(f"ファイル: {file_name} の前処理を開始します")
         enhanced_img, binary_img = self.preprocess_image(masked_original)
 
         # 前処理結果の保存（デバッグ用）
@@ -454,14 +454,14 @@ class TextExtractor:
                 enhanced_success, enhanced_buffer = cv2.imencode(
                     '.jpg', enhanced_img)
                 if enhanced_success:
-                    with open(os.path.join(debug_dir, f"{base_name}_enhanced.jpg"), 'wb') as f:
+                    with open(os.path.join(debug_dir, f"{base_name_no_ext}_enhanced.jpg"), 'wb') as f:
                         f.write(enhanced_buffer)
 
                 # 二値化画像の保存
                 binary_success, binary_buffer = cv2.imencode(
                     '.jpg', binary_img)
                 if binary_success:
-                    with open(os.path.join(debug_dir, f"{base_name}_binary.jpg"), 'wb') as f:
+                    with open(os.path.join(debug_dir, f"{base_name_no_ext}_binary.jpg"), 'wb') as f:
                         f.write(binary_buffer)
 
                 text_logger.info(f"前処理済み画像をデバッグディレクトリに保存しました: {debug_dir}")
@@ -497,7 +497,7 @@ class TextExtractor:
 
         # デバッグ用に最終マスクを保存
         if self.debug_output:
-            mask_path = os.path.join(debug_dir, f"{base_name}_text_mask.jpg")
+            mask_path = os.path.join(debug_dir, f"{base_name_no_ext}_text_mask.jpg")
             try:
                 success, buffer = cv2.imencode('.jpg', refined_mask)
                 if success:
@@ -538,8 +538,8 @@ class TextExtractor:
                 rgba = rgba[y:y+h2, x:x+w2]
 
         # 最終的な出力画像を保存
-        out_path = os.path.join(out_dir, f"{base_name}_texts.png")
-        svg_path = os.path.join(out_dir, f"{base_name}_outline.svg")
+        out_path = os.path.join(out_dir, f"{base_name_no_ext}_texts.png")
+        svg_path = os.path.join(out_dir, f"{base_name_no_ext}_outline.svg")
         try:
             success, buffer = cv2.imencode('.png', rgba)
             if success:
