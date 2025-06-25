@@ -146,6 +146,14 @@ if __name__ == "__main__":
                         help='When true, save debug images to debug directory')
     # 監視するディレクトリパスは、Pythonプロジェクトフォルダが置かれたディレクトリ（およびそのサブディレクトリ）
     args = parser.parse_args()
+
+    # Detect console availability. If no TTY is attached,
+    # force --no_console mode so that ainput() is not used.
+    if not sys.stdin or not sys.stdin.isatty():
+        if not args.no_console:
+            print("Console not attached. Disabling console input.")
+        args.no_console = True
+
     args.single_instance_only = args.single_instance_only.lower() == 'true'
     config = {}
     if os.path.isfile(args.config):
