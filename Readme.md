@@ -178,6 +178,16 @@ text_cropping.exe --exclude_subdirectories --ip <IPアドレス> --port <ポー�
    python main.py --exclude_subdirectories --target <監視対象ディレクトリ> --seconds 2 --ip <IPアドレス> --port <ポート番号> --delay 3
    ```
 
+## Build Executable
+
+`build.bat` を使用して PyInstaller で単一ファイルの実行形式を作成できます。コマンドプロンプトで次のように実行してください：
+
+```cmd
+build.bat
+```
+
+ウィンドウ表示用 (`--windowed`) にビルドする場合はコンソールがないため、`--no_console` を付与するか自動でコンソールを検出する仕組みが必要です。これを行わないと `ainput` のエラーが発生することがあります。
+
 ## 【拡張性】
 
 * OCR読み取り結果をログ/テキストファイルに出力
