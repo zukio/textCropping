@@ -9,6 +9,7 @@ from modules.utils import logwriter  # noqa: F401
 import json
 import subprocess
 import tempfile
+import time
 from PIL import Image, ImageOps
 
 # ログの設定
@@ -65,6 +66,26 @@ text_logger, detected_text_logger = setup_text_logging()
 def log_detected_text(text):
     """検出されたテキストを専用ログに記録する"""
     detected_text_logger.log(DETECTED_TEXT, f"検出テキスト: \n{text}")
+
+
+def wait_for_file_ready(file_path, timeout=2.0, interval=0.1):
+    """Check if file exists and size is stable within timeout."""
+    end_time = time.time() + timeout
+    last_size = -1
+    while time.time() < end_time:
+        if os.path.exists(file_path):
+            try:
+                size = os.path.getsize(file_path)
+            except OSError:
+                size = -1
+            if size > 0 and size == last_size:
+                return True
+            last_size = size
+        time.sleep(interval)
+    try:
+        return os.path.getsize(file_path) > 0
+    except OSError:
+        return False
 
 # 優先順位：
 # 1. 環境変数で TESSERACT_PATH があればそれを使う
@@ -281,6 +302,9 @@ class TextExtractor:
 
     def extract_texts(self, file_path):
         # 日本語ファイル名対応のため、NumPyを使用して画像を読み込む
+        if not wait_for_file_ready(file_path):
+            text_logger.error(f"ファイルが準備できていません: {file_path}")
+            raise FileNotFoundError(f"File not ready: {file_path}")
         try:
             # ファイルパスをUTF-8でエンコードして確実に日本語ファイル名を処理できるようにする
             text_logger.info(f"画像読み込み開始: {file_path}")

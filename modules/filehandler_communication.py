@@ -169,6 +169,8 @@ class TargetFileHandler(FileSystemEventHandler):
     def extract_texts(self, file_path):
         """指定された画像から文字部分を抽出します。"""
         try:
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
             output_path = TextExtractor(
                 self.output_dir,
                 crop=self.crop,
